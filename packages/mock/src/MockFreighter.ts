@@ -42,7 +42,7 @@ export class MockFreighter {
     this.state = {
       connected: false,
       publicKey: null,
-      network: this.options.network,
+      network: this.options.network ?? null,
     };
   }
 
@@ -58,16 +58,16 @@ export class MockFreighter {
    * Connects to the mock wallet
    * @returns Promise resolving to connection result
    */
-  connect(): Promise<{ publicKey: string; network: string }> {
+  connect(): Promise<{ publicKey: string; network: string | null }> {
     this.state = {
       connected: true,
       publicKey: this.options.publicKey,
-      network: this.options.network,
+      network: this.options.network ?? null,
     };
 
     return Promise.resolve({
       publicKey: this.options.publicKey,
-      network: this.options.network,
+      network: this.options.network ?? null,
     });
   }
 
@@ -78,7 +78,7 @@ export class MockFreighter {
     this.state = {
       connected: false,
       publicKey: null,
-      network: this.options.network,
+      network: this.options.network ?? null,
     };
   }
 
@@ -98,7 +98,7 @@ export class MockFreighter {
    * Gets the network passphrase
    * @returns Promise resolving to network passphrase
    */
-  getNetwork(): Promise<string> {
+  getNetwork(): Promise<string | null> {
     return Promise.resolve(this.state.network);
   }
 

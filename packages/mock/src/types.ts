@@ -78,7 +78,7 @@ export interface FreighterState {
   /** Public key */
   publicKey: string | null;
   /** Network passphrase */
-  network: string;
+  network: string | null;
 }
 
 /** Freighter connection options */

@@ -127,7 +127,7 @@ export class EventPoller {
 
     // Build filter for all contracts we care about
     // Using a simple filter - in production you might want more specific filters
-    const request: SorobanRpc.GetEventsRequest = {
+    const request = {
       startLedger,
       filters: [
         {
@@ -135,13 +135,13 @@ export class EventPoller {
         },
       ],
       cursor,
-    };
+    } as any;
 
     const response = await this.server.getEvents(request);
 
     // Update cursor state
     if (response.latestLedger > 0) {
-      this.cursorState.update(response.latestLedger, response.cursor);
+      this.cursorState.update(response.latestLedger, cursor ?? undefined);
     }
 
     // Decode events
@@ -155,17 +155,17 @@ export class EventPoller {
    * @returns Normalized raw events
    */
   private normalizeEvents(
-    events: SorobanRpc.EventResponse[] | undefined
+    events: any[] | undefined
   ): RawEvent[] {
     if (!events || events.length === 0) return [];
 
     return events.map((event) => ({
       type: 'contract',
       contractId: event.contractId?.toString() ?? '',
-      topics: event.topic ?? [],
-      value: event.value ?? '',
-      ledgerSequence: event.ledgerSequence ?? 0,
-      txHash: event.txHash?.toString('hex') ?? '',
+      topics: Array.isArray(event.topic) ? event.topic.map((t: any) => t.toString ? t.toString() : String(t)) : [],
+      value: event.value?.toString ? event.value.toString() : String(event.value ?? ''),
+      ledgerSequence: event.ledgerSequence ?? event.ledger ?? 0,
+      txHash: event.txHash?.toString ? event.txHash.toString() : String(event.txHash ?? ''),
     }));
   }
 }

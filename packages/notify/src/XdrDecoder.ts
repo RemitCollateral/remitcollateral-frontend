@@ -70,48 +70,49 @@ export class XdrDecoder {
    * @returns JavaScript representation
    */
   private scValToObject(scVal: xdr.ScVal): Record<string, unknown> | unknown {
-    switch (scVal.switch()) {
-      case xdr.ScValType.scvBool():
+    const valType = scVal.switch();
+    switch (true) {
+      case valType.value === xdr.ScValType.scvBool().value:
         return scVal.b();
 
-      case xdr.ScValType.scvU32():
-      case xdr.ScValType.scvI32():
+      case valType.value === xdr.ScValType.scvU32().value:
+      case valType.value === xdr.ScValType.scvI32().value:
         return scVal.u32() ?? scVal.i32();
 
-      case xdr.ScValType.scvU64():
-      case xdr.ScValType.scvI64():
-      case xdr.ScValType.scvU128():
-      case xdr.ScValType.scvI128():
-      case xdr.ScValType.scvU256():
-      case xdr.ScValType.scvI256():
+      case valType.value === xdr.ScValType.scvU64().value:
+      case valType.value === xdr.ScValType.scvI64().value:
+      case valType.value === xdr.ScValType.scvU128().value:
+      case valType.value === xdr.ScValType.scvI128().value:
+      case valType.value === xdr.ScValType.scvU256().value:
+      case valType.value === xdr.ScValType.scvI256().value:
         return this.decodeInt(scVal);
 
-      case xdr.ScValType.scvBytes():
+      case valType.value === xdr.ScValType.scvBytes().value:
         return scVal.bytes()?.toString('base64') ?? '';
 
-      case xdr.ScValType.scvString():
+      case valType.value === xdr.ScValType.scvString().value:
         return scVal.str()?.toString() ?? '';
 
-      case xdr.ScValType.scvSymbol():
+      case valType.value === xdr.ScValType.scvSymbol().value:
         return scVal.sym()?.toString() ?? '';
 
-      case xdr.ScValType.scvVec():
+      case valType.value === xdr.ScValType.scvVec().value:
         return this.decodeVec(scVal);
 
-      case xdr.ScValType.scvMap():
+      case valType.value === xdr.ScValType.scvMap().value:
         return this.decodeMap(scVal);
 
-      case xdr.ScValType.scvAddress():
+      case valType.value === xdr.ScValType.scvAddress().value:
         return this.decodeAddress(scVal);
 
-      case xdr.ScValType.scvContractInstance():
-      case xdr.ScValType.scvLedgerKeyContractInstance():
+      case valType.value === xdr.ScValType.scvContractInstance().value:
+      case valType.value === xdr.ScValType.scvLedgerKeyContractInstance().value:
         return { type: 'contract_instance' };
 
-      case xdr.ScValType.scvTimepoint():
+      case valType.value === xdr.ScValType.scvTimepoint().value:
         return scVal.timepoint();
 
-      case xdr.ScValType.scvDuration():
+      case valType.value === xdr.ScValType.scvDuration().value:
         return scVal.duration();
 
       default:
@@ -138,30 +139,30 @@ export class XdrDecoder {
    * @returns BigInt or number
    */
   private decodeInt(scVal: xdr.ScVal): bigint | number {
-    const switchVal = scVal.switch();
+    const switchVal = scVal.switch() as any;
 
     try {
-      if (switchVal.equals(xdr.ScValType.scvU64())) {
+      if (switchVal.value === xdr.ScValType.scvU64().value) {
         const u64 = scVal.u64();
         return u64 ? BigInt(u64.toString()) : BigInt(0);
       }
-      if (switchVal.equals(xdr.ScValType.scvI64())) {
+      if (switchVal.value === xdr.ScValType.scvI64().value) {
         const i64 = scVal.i64();
         return i64 ? BigInt(i64.toString()) : BigInt(0);
       }
-      if (switchVal.equals(xdr.ScValType.scvU128())) {
+      if (switchVal.value === xdr.ScValType.scvU128().value) {
         const u128 = scVal.u128();
         return u128 ? BigInt(u128.toString()) : BigInt(0);
       }
-      if (switchVal.equals(xdr.ScValType.scvI128())) {
+      if (switchVal.value === xdr.ScValType.scvI128().value) {
         const i128 = scVal.i128();
         return i128 ? BigInt(i128.toString()) : BigInt(0);
       }
-      if (switchVal.equals(xdr.ScValType.scvU256())) {
+      if (switchVal.value === xdr.ScValType.scvU256().value) {
         const u256 = scVal.u256();
         return u256 ? BigInt(u256.toString()) : BigInt(0);
       }
-      if (switchVal.equals(xdr.ScValType.scvI256())) {
+      if (switchVal.value === xdr.ScValType.scvI256().value) {
         const i256 = scVal.i256();
         return i256 ? BigInt(i256.toString()) : BigInt(0);
       }
