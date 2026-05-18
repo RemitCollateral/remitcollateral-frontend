@@ -1,0 +1,23 @@
+{
+  "name": "mergelabs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open source npm toolkit monorepo for the Stellar/Soroban blockchain ecosystem",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean",
+    "coverage": "pnpm -r coverage",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
