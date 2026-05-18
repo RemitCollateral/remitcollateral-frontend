@@ -124,6 +124,9 @@ export interface StellarEventResult {
   error: Error | null;
 }
 
+/** Event callback type */
+export type EventCallback = (event: unknown) => void;
+
 /** Freighter wallet state */
 export interface FreighterState {
   /** Whether connected */
@@ -143,5 +146,5 @@ export interface UseFreighterResult extends FreighterState {
   /** Disconnect wallet */
   disconnect: () => void;
   /** Sign transaction */
-  signTransaction: (txXdr: string) => Promise<string>;
+  signTransaction: (txXdr: string, networkPassphrase?: string) => Promise<string>;
 }

@@ -33,8 +33,8 @@ export function useStellarEvent(
   /**
    * Event handler callback
    */
-  const handleEvent: EventCallback = useCallback((decodedEvent) => {
-    setEvent(decodedEvent);
+  const handleEvent: EventCallback = useCallback((decodedEvent: unknown) => {
+    setEvent(decodedEvent as DecodedEvent);
   }, []);
 
   useEffect(() => {

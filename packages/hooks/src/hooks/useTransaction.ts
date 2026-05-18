@@ -31,7 +31,7 @@ const DEFAULT_POLLING: PollingConfig = {
  */
 function calculateNextInterval(
   currentInterval: number,
-  attempt: number,
+  _attempt: number,
   config: PollingConfig
 ): number {
   const next = Math.min(

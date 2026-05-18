@@ -8,6 +8,7 @@ import {
   TransactionBuilder,
   Account,
   Networks,
+  BASE_FEE,
   xdr,
 } from '@stellar/stellar-sdk';
 import { useStellarContext } from '../context/StellarProvider';
@@ -71,7 +72,8 @@ export function useContractCall(): ContractCallResult {
         const contract = new Contract(params.contractId);
 
         // Build the operation
-        const operation = contract.call(params.function, ...(params.args ?? []));
+        const args = (params.args ?? []) as xdr.ScVal[];
+        const operation = contract.call(params.function, ...args);
 
         // Use public key if connected, otherwise use a dummy for simulation
         const sourceAddress = connected && publicKey ? publicKey : 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
@@ -79,7 +81,7 @@ export function useContractCall(): ContractCallResult {
 
         // Build transaction for simulation
         const transaction = new TransactionBuilder(sourceAccount, {
-          fee: SorobanRpc.Api.DEFAULT_FEE,
+          fee: BASE_FEE,
           networkPassphrase,
         })
           .addOperation(operation)
@@ -116,7 +118,7 @@ export function useContractCall(): ContractCallResult {
         // Build the final transaction using the user's real account
         const userAccount = new Account(publicKey, '0');
         const finalTx = new TransactionBuilder(userAccount, {
-          fee: simulation.minResourceFee ?? SorobanRpc.Api.DEFAULT_FEE,
+          fee: simulation.minResourceFee ?? BASE_FEE,
           networkPassphrase,
         })
           .addOperation(operation)

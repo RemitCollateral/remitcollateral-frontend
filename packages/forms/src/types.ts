@@ -3,8 +3,8 @@
  */
 import type { ReactNode } from 'react';
 
-/** Generic form values */
-export type FormValues = Record<string, string>;
+/** Generic form values - allows optional undefined properties */
+export type FormValues = Record<string, string | undefined>;
 
 /** Form errors by field */
 export type FormErrors = Record<string, string>;

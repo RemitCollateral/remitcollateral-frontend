@@ -2,7 +2,6 @@
  * Hook to fetch XLM and token balances
  */
 import { useState, useEffect, useCallback } from 'react';
-import { SorobanRpc } from '@stellar/stellar-sdk';
 import { useStellarContext } from '../context/StellarProvider';
 import type { BalanceResult } from '../types';
 
@@ -35,23 +34,8 @@ export function useBalance(
     setError(null);
 
     try {
-      const server = new SorobanRpc.Server(config.rpcUrl);
-
-      if (options.contractId) {
-        // Token balance - call balance_of on the contract
-        const result = await server.getContractData(
-          options.contractId,
-          { wasm: Buffer.alloc(0) }, // Dummy key for now
-          SorobanRpc.Durability.Persistent
-        );
-        // Parse result - this is simplified, real implementation would decode SCVal
-        setBalance(BigInt(0));
-      } else {
-        // Native XLM balance - requires Horizon or account simulation
-        // For Soroban-only setup, we'd need to query the account via simulation
-        // This is a placeholder implementation
-        setBalance(BigInt(0));
-      }
+      // Placeholder: real implementation would query Horizon or simulate contract call
+      setBalance(BigInt(0));
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch balance'));
     } finally {
