@@ -1,10 +1,11 @@
 # MergeLabs
 
-**Open-source toolkit for building Stellar/Soroban applications**
+Building on Stellar means solving the same problems over and over — wallet connection, event listening, payment forms, testing mocks. MergeLabs solves them once so you can focus on your product.
 
 [![CI Status](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml/badge.svg)](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml)
 [![Code Coverage](https://codecov.io/gh/AstronLabs/MergeLabs/branch/main/graph/badge.svg)](https://codecov.io/gh/AstronLabs/MergeLabs)
 [![npm](https://img.shields.io/badge/npm-%40astronlabs-blue)](https://www.npmjs.com/org/astronlabs)
+[![Docs](https://img.shields.io/badge/docs-fumadocs-green)](https://astronlabs.io/docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
