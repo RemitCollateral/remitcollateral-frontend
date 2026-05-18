@@ -4,7 +4,15 @@
  * Headless unstyled form for adding a trustline to an asset
  */
 import { useState, useCallback } from 'react';
-import { useFreighter } from '@astronlabs/hooks';
+import {
+  Horizon,
+  Networks,
+  Asset,
+  Operation,
+  TransactionBuilder,
+  BASE_FEE,
+} from '@stellar/stellar-sdk';
+import { useFreighter, useStellarContext } from '@astronlabs/hooks';
 import type { TrustlineFormProps, TrustlineValues, FormChildProps, FormErrors } from './types';
 
 /**
@@ -14,6 +22,20 @@ const DEFAULT_VALUES: TrustlineValues = {
   assetCode: '',
   issuer: '',
   limit: '',
+};
+
+/** Horizon URLs */
+const HORIZON_URLS: Record<string, string> = {
+  testnet: 'https://horizon-testnet.stellar.org',
+  mainnet: 'https://horizon.stellar.org',
+  futurenet: 'https://horizon-futurenet.stellar.org',
+};
+
+/** Network passphrases */
+const NETWORK_PASSPHRASES: Record<string, string> = {
+  testnet: Networks.TESTNET,
+  mainnet: Networks.PUBLIC,
+  futurenet: Networks.FUTURENET,
 };
 
 /**
@@ -88,7 +110,8 @@ export function TrustlineForm({
   onSuccess,
   onError,
 }: TrustlineFormProps): JSX.Element {
-  const { connected } = useFreighter();
+  const { connected, publicKey, signTransaction } = useFreighter();
+  const { config } = useStellarContext();
 
   const [values, setValues] = useState<TrustlineValues>(DEFAULT_VALUES);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -109,7 +132,7 @@ export function TrustlineForm({
   );
 
   /**
-   * Handle form submission
+   * Handle form submission - builds and submits ChangeTrust operation
    */
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -121,7 +144,7 @@ export function TrustlineForm({
         return;
       }
 
-      if (!connected) {
+      if (!connected || !publicKey) {
         setErrors({ submit: 'Please connect your wallet first' });
         return;
       }
@@ -129,12 +152,48 @@ export function TrustlineForm({
       setLoading(true);
 
       try {
-        // In a real implementation, this would create and submit a
-        // ChangeTrust operation to the Stellar network
-        // Placeholder for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Setup Horizon server and network
+        const horizonUrl = config.horizonUrl ?? HORIZON_URLS[config.network] ?? HORIZON_URLS.testnet;
+        const networkPassphrase = config.networkPassphrase ?? NETWORK_PASSPHRASES[config.network] ?? Networks.TESTNET;
+        const server = new Horizon.Server(horizonUrl);
+
+        // Load source account
+        const account = await server.loadAccount(publicKey);
+
+        // Create the asset
+        const asset = new Asset(values.assetCode, values.issuer);
+
+        // Build ChangeTrust operation
+        const changeTrustOp = values.limit
+          ? Operation.changeTrust({
+              asset,
+              limit: values.limit,
+            })
+          : Operation.changeTrust({
+              asset,
+            });
+
+        // Build transaction
+        const transaction = new TransactionBuilder(account, {
+          fee: BASE_FEE,
+          networkPassphrase,
+        })
+          .addOperation(changeTrustOp)
+          .setTimeout(30)
+          .build();
+
+        const txXdr = transaction.toXDR();
+
+        // Sign with Freighter
+        const signedXdr = await signTransaction(txXdr, networkPassphrase);
+
+        // Submit to Horizon
+        const result = await server.submitTransaction(
+          TransactionBuilder.fromXDR(signedXdr, networkPassphrase)
+        );
 
         onSuccess?.({
+          txHash: result.hash,
           assetCode: values.assetCode,
           issuer: values.issuer,
           limit: values.limit,
@@ -150,7 +209,7 @@ export function TrustlineForm({
         setLoading(false);
       }
     },
-    [values, connected, onSuccess, onError]
+    [values, connected, publicKey, signTransaction, config, onSuccess, onError]
   );
 
   const childProps: FormChildProps<TrustlineValues> = {

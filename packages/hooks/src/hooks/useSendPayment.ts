@@ -2,8 +2,32 @@
  * Hook to send XLM or token payments
  */
 import { useState, useCallback } from 'react';
+import {
+  Horizon,
+  Networks,
+  Asset,
+  Operation,
+  TransactionBuilder,
+  BASE_FEE,
+  Memo,
+} from '@stellar/stellar-sdk';
 import { useStellarContext } from '../context/StellarProvider';
+import { useFreighter } from './useFreighter';
 import type { SendPaymentResult, PaymentParams } from '../types';
+
+/** Network passphrases */
+const NETWORK_PASSPHRASES: Record<string, string> = {
+  testnet: Networks.TESTNET,
+  mainnet: Networks.PUBLIC,
+  futurenet: Networks.FUTURENET,
+};
+
+/** Horizon URLs */
+const HORIZON_URLS: Record<string, string> = {
+  testnet: 'https://horizon-testnet.stellar.org',
+  mainnet: 'https://horizon.stellar.org',
+  futurenet: 'https://horizon-futurenet.stellar.org',
+};
 
 /**
  * Hook for sending XLM or token payments
@@ -28,6 +52,7 @@ import type { SendPaymentResult, PaymentParams } from '../types';
  */
 export function useSendPayment(): SendPaymentResult {
   const { config } = useStellarContext();
+  const { publicKey, signTransaction, connected } = useFreighter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -42,29 +67,64 @@ export function useSendPayment(): SendPaymentResult {
       setTxHash(null);
 
       try {
-        // For Soroban contracts (tokens), we'd build a contract invocation
-        // For native XLM, we'd use a payment operation
+        if (!connected || !publicKey) {
+          throw new Error('Wallet not connected. Connect with useFreighter first.');
+        }
 
+        // Token payments via contract
         if (params.asset && params.asset !== 'XLM') {
-          // Token payment - invoke contract transfer
-          // This requires a signed transaction from the user
-          // Implementation depends on wallet integration
           throw new Error(
-            'Token payments require wallet signing. Use useFreighter + useContractCall'
+            'Token payments require Soroban contract invocation. Use useContractCall'
           );
         }
 
-        // Native XLM payment
-        // In a real implementation, this would:
-        // 1. Load source account from Horizon
-        // 2. Build payment operation
-        // 3. Sign with user's wallet
-        // 4. Submit to Horizon or RPC
+        // Use provided horizon URL or default for network
+        const horizonUrl = config.horizonUrl ?? HORIZON_URLS[config.network] ?? HORIZON_URLS.testnet;
+        const server = new Horizon.Server(horizonUrl);
+        const networkPassphrase = config.networkPassphrase ?? NETWORK_PASSPHRASES[config.network] ?? Networks.TESTNET;
 
-        // Placeholder implementation
-        const mockHash = `tx_${Date.now()}_${params.to.slice(0, 8)}`;
-        setTxHash(mockHash);
-        return mockHash;
+        // Load source account
+        const account = await server.loadAccount(publicKey);
+
+        // Build payment operation
+        const amount = params.amount;
+        const destination = params.to;
+
+        // Create memo if provided
+        const memo = params.memo ? Memo.text(params.memo) : undefined;
+
+        // Build transaction
+        const transaction = new TransactionBuilder(account, {
+          fee: BASE_FEE,
+          networkPassphrase,
+        })
+          .addOperation(
+            Operation.payment({
+              destination,
+              asset: Asset.native(),
+              amount,
+            })
+          )
+          .setTimeout(30);
+
+        if (memo) {
+          transaction.addMemo(memo);
+        }
+
+        const builtTx = transaction.build();
+        const txXdr = builtTx.toXDR();
+
+        // Sign with Freighter
+        const signedXdr = await signTransaction(txXdr, networkPassphrase);
+
+        // Submit to Horizon
+        const result = await server.submitTransaction(
+          TransactionBuilder.fromXDR(signedXdr, networkPassphrase)
+        );
+
+        const hash = result.hash;
+        setTxHash(hash);
+        return hash;
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error('Payment failed');
@@ -74,7 +134,7 @@ export function useSendPayment(): SendPaymentResult {
         setLoading(false);
       }
     },
-    [config]
+    [config, connected, publicKey, signTransaction]
   );
 
   return {

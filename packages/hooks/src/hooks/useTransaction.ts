@@ -1,29 +1,76 @@
 /**
- * Hook to fetch and track a transaction
+ * Hook to fetch and track a transaction with exponential backoff polling
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SorobanRpc } from '@stellar/stellar-sdk';
 import { useStellarContext } from '../context/StellarProvider';
 import type { TransactionResult, TransactionStatus } from '../types';
 
+/** Polling configuration */
+interface PollingConfig {
+  /** Initial poll interval in ms (default: 1000) */
+  initialInterval: number;
+  /** Maximum poll interval in ms (default: 15000) */
+  maxInterval: number;
+  /** Maximum number of polls (default: 60) */
+  maxPolls: number;
+  /** Exponential backoff multiplier (default: 1.5) */
+  backoffMultiplier: number;
+}
+
+/** Default polling config ~1 min of polling */
+const DEFAULT_POLLING: PollingConfig = {
+  initialInterval: 1000,
+  maxInterval: 15000,
+  maxPolls: 60,
+  backoffMultiplier: 1.5,
+};
+
 /**
- * Hook for fetching and tracking transaction status
+ * Calculate next poll interval with exponential backoff
+ */
+function calculateNextInterval(
+  currentInterval: number,
+  attempt: number,
+  config: PollingConfig
+): number {
+  const next = Math.min(
+    currentInterval * config.backoffMultiplier,
+    config.maxInterval
+  );
+  // Add jitter (0-20% randomness) to prevent thundering herd
+  const jitter = Math.random() * 0.2 * next;
+  return next + jitter;
+}
+
+/**
+ * Hook for fetching and tracking transaction status with smart polling
  *
  * @example
  * ```tsx
- * const { status, transaction, loading, error } = useTransaction(txHash);
+ * const { status, transaction, loading, error, isPolling } = useTransaction(txHash);
  *
  * if (status === 'success') {
  *   console.log('Transaction confirmed!');
  * }
  * ```
  */
-export function useTransaction(txHash: string | null): TransactionResult {
+export function useTransaction(
+  txHash: string | null,
+  polling?: Partial<PollingConfig>
+): TransactionResult {
   const { config } = useStellarContext();
   const [status, setStatus] = useState<TransactionStatus>('unknown');
   const [transaction, setTransaction] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  // Polling state refs to avoid stale closures
+  const pollCountRef = useRef(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPollingRef = useRef(false);
+
+  const pollConfig: PollingConfig = { ...DEFAULT_POLLING, ...polling };
 
   const fetchTransaction = useCallback(async () => {
     if (!txHash) {
@@ -37,8 +84,6 @@ export function useTransaction(txHash: string | null): TransactionResult {
 
     try {
       const server = new SorobanRpc.Server(config.rpcUrl);
-
-      // Get transaction from RPC
       const response = await server.getTransaction(txHash);
 
       // Map response status to our status
@@ -51,7 +96,7 @@ export function useTransaction(txHash: string | null): TransactionResult {
           txStatus = 'failed';
           break;
         case 'NOT_FOUND':
-          txStatus = 'pending'; // Still waiting
+          txStatus = 'pending';
           break;
         default:
           txStatus = 'unknown';
@@ -73,20 +118,53 @@ export function useTransaction(txHash: string | null): TransactionResult {
   }, [txHash, config.rpcUrl]);
 
   useEffect(() => {
+    // Reset state when txHash changes
+    pollCountRef.current = 0;
+    isPollingRef.current = false;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     void fetchTransaction();
 
-    // Poll for pending transactions
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (txHash && status === 'pending') {
-      interval = setInterval(fetchTransaction, 5000);
+    // Exponential backoff polling for pending transactions
+    const scheduleNextPoll = (currentInterval: number): void => {
+      if (pollCountRef.current >= pollConfig.maxPolls) {
+        isPollingRef.current = false;
+        return;
+      }
+
+      timeoutRef.current = setTimeout(async () => {
+        await fetchTransaction();
+
+        // Continue polling if still pending
+        if (status === 'pending' && isPollingRef.current) {
+          pollCountRef.current++;
+          const nextInterval = calculateNextInterval(
+            currentInterval,
+            pollCountRef.current,
+            pollConfig
+          );
+          scheduleNextPoll(nextInterval);
+        }
+      }, currentInterval);
+    };
+
+    if (txHash && status === 'pending' && !isPollingRef.current) {
+      isPollingRef.current = true;
+      scheduleNextPoll(pollConfig.initialInterval);
     }
 
     return () => {
-      if (interval) {
-        clearInterval(interval);
+      isPollingRef.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
-  }, [txHash, status, fetchTransaction]);
+  }, [txHash, status, fetchTransaction, pollConfig]);
 
   return {
     status,
