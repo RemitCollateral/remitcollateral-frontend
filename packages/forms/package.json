@@ -2,6 +2,24 @@
   "name": "@astronlabs/forms",
   "version": "0.1.0",
   "description": "Headless React components for Stellar UI flows",
+  "author": "AstronLabs <hello@astronlabs.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstronLabs/MergeLabs.git",
+    "directory": "packages/forms"
+  },
+  "bugs": {
+    "url": "https://github.com/AstronLabs/MergeLabs/issues"
+  },
+  "homepage": "https://github.com/AstronLabs/MergeLabs#readme",
+  "keywords": [
+    "stellar",
+    "soroban",
+    "react",
+    "forms",
+    "blockchain"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

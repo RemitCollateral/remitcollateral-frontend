@@ -2,6 +2,25 @@
   "name": "@astronlabs/notify",
   "version": "0.1.0",
   "description": "Real-time Soroban contract event listener",
+  "author": "AstronLabs <hello@astronlabs.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstronLabs/MergeLabs.git",
+    "directory": "packages/notify"
+  },
+  "bugs": {
+    "url": "https://github.com/AstronLabs/MergeLabs/issues"
+  },
+  "homepage": "https://github.com/AstronLabs/MergeLabs#readme",
+  "keywords": [
+    "stellar",
+    "soroban",
+    "blockchain",
+    "events",
+    "web3",
+    "xdr"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

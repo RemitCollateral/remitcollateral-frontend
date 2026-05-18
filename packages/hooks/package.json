@@ -2,6 +2,25 @@
   "name": "@astronlabs/hooks",
   "version": "0.1.0",
   "description": "React hooks for Stellar",
+  "author": "AstronLabs <hello@astronlabs.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstronLabs/MergeLabs.git",
+    "directory": "packages/hooks"
+  },
+  "bugs": {
+    "url": "https://github.com/AstronLabs/MergeLabs/issues"
+  },
+  "homepage": "https://github.com/AstronLabs/MergeLabs#readme",
+  "keywords": [
+    "stellar",
+    "soroban",
+    "blockchain",
+    "react",
+    "hooks",
+    "web3"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

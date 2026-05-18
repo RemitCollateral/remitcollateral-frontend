@@ -2,6 +2,24 @@
   "name": "@astronlabs/mock",
   "version": "0.1.0",
   "description": "Mock Soroban contracts and RPC for testing",
+  "author": "AstronLabs <hello@astronlabs.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstronLabs/MergeLabs.git",
+    "directory": "packages/mock"
+  },
+  "bugs": {
+    "url": "https://github.com/AstronLabs/MergeLabs/issues"
+  },
+  "homepage": "https://github.com/AstronLabs/MergeLabs#readme",
+  "keywords": [
+    "stellar",
+    "soroban",
+    "mock",
+    "testing",
+    "blockchain"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
