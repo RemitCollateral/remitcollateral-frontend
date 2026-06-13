@@ -1,372 +1,142 @@
 # MergeLabs
 
+A TypeScript-first monorepo of production-ready tooling, React hooks, headless forms, and testing mocks for Stellar and Soroban.
+
 Building on Stellar means solving the same problems over and over — wallet connection, event listening, payment forms, testing mocks. MergeLabs solves them once so you can focus on your product.
+
+It's the Swiss Army knife for Stellar and Soroban integration.
 
 [![CI Status](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml/badge.svg)](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml)
 [![Code Coverage](https://codecov.io/gh/AstronLabs/MergeLabs/branch/main/graph/badge.svg)](https://codecov.io/gh/AstronLabs/MergeLabs)
 [![npm](https://img.shields.io/badge/npm-%40astronlabs-blue)](https://www.npmjs.com/org/astronlabs)
-[![Docs](https://img.shields.io/badge/docs-fumadocs-green)](https://astronlabs.io/docs)
+[![Docs](https://img.shields.io/badge/docs-technical-green)](documentation/documentation.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## Overview
+## Motivation
 
-MergeLabs is a TypeScript-first monorepo providing production-ready packages for the Stellar and Soroban blockchain ecosystem. Built with strict typing, comprehensive testing, and real-world use cases in mind.
+Integrating with Stellar and Soroban can feel repetitive. Developers must build transaction polling mechanisms, decode complex XDR data formats, hand-craft forms, and set up mock RPCs to test basic client-side functionality. Consumer wallets and Horizon endpoints present separate integration challenges, meaning developers write hundreds of lines of boilerplate before writing their first line of application logic.
 
-### Why MergeLabs?
+MergeLabs makes Stellar integration legible and seamless:
 
-- **Real transaction building** — Not mock implementations. Real Horizon payments, trustlines, and Soroban contract calls
-- **Production-tested** — Exponential backoff, error handling, retry logic built-in
-- **Developer experience** — Type-safe APIs, JSDoc comments, headless components
-- **Wallet agnostic** — Freighter integration with extensibility for more wallets
-
----
-
-## Packages
-
-| Package | Version | Description | NPM |
-|---------|---------|-------------|-----|
-| `@astronlabs/notify` | [![npm](https://img.shields.io/npm/v/@astronlabs/notify)](https://www.npmjs.com/package/@astronlabs/notify) | Real-time Soroban event streaming with XDR decoding | [Docs](#astronlabsnotify) |
-| `@astronlabs/mock` | [![npm](https://img.shields.io/npm/v/@astronlabs/mock)](https://www.npmjs.com/package/@astronlabs/mock) | Mock RPC, contracts, and wallets for testing | [Docs](#astronlabsmock) |
-| `@astronlabs/hooks` | [![npm](https://img.shields.io/npm/v/@astronlabs/hooks)](https://www.npmjs.com/package/@astronlabs/hooks) | React hooks for Stellar integration | [Docs](#astronlabshooks) |
-| `@astronlabs/forms` | [![npm](https://img.shields.io/npm/v/@astronlabs/forms)](https://www.npmjs.com/package/@astronlabs/forms) | Headless form components | [Docs](#astronlabsforms) |
+*   **Connect and manage wallets**: Connect wallets like Freighter, and handle public keys and signatures without boilerplate.
+*   **Stream contract events**: Stream live Soroban events using a cursor-tracked engine that decodes raw XDR data into native JavaScript primitives.
+*   **Generate forms with validation**: Implement headless transaction forms for sending, trusting, or swapping assets using the render props pattern.
+*   **Test offline**: Mock Freighter wallets, smart contracts, and RPC servers locally using robust testing fixtures.
 
 ---
 
-## Quick Start
+## Features
 
-### Installation
+### `@astronlabs/hooks` (React Hooks)
+*   **StellarProvider** — Global context setup for testnet/mainnet network parameters.
+*   **useFreighter** — React hook for Freighter wallet connection status and transaction signing.
+*   **useBalance** — Cache-optimized hook for retrieving XLM and custom Stellar Asset Contract (SAC) token balances.
+*   **useContractCall** — Stateful Soroban contract invocation (simulate $\rightarrow$ sign $\rightarrow$ submit $\rightarrow$ poll).
+*   **useSendPayment** — Quick Horizon payment builder.
+*   **useTransaction** — RPC poll engine with built-in exponential backoff.
 
-```bash
-# Using pnpm (recommended)
-pnpm add @astronlabs/hooks @astronlabs/forms
+### `@astronlabs/notify` (Event Streaming)
+*   **StellarNotify** — High-performance event polling class with configurable intervals.
+*   **Cursor Tracking** — Remembers and resumes from the last seen ledger sequence to prevent missed events.
+*   **Type-safe Filters** — Topic-based and contract-based routing criteria.
+*   **XDR Decoder** — Automatically parses raw base64 XDR events into JS values (strings, bigints, numbers).
 
-# Using npm
-npm install @astronlabs/hooks @astronlabs/forms
+### `@astronlabs/forms` (Headless UI Components)
+*   **ConnectWalletButton** — Interactive button helper handling wallet status.
+*   **SendPaymentForm** — Form handler for native and custom token payments with validation.
+*   **TrustlineForm** — Headless component to establish token trustlines.
+*   **SwapForm** — Orchestrator for DEX swaps with slippage and path calculations.
 
-# Using yarn
-yarn add @astronlabs/hooks @astronlabs/forms
-```
-
-### Basic Usage
-
-```tsx
-import { StellarProvider, useFreighter, useBalance } from '@astronlabs/hooks';
-
-function App() {
-  return (
-    <StellarProvider
-      config={{
-        network: 'testnet',
-        rpcUrl: 'https://soroban-testnet.stellar.org',
-      }}
-    >
-      <Wallet />
-    </StellarProvider>
-  );
-}
-
-function Wallet() {
-  const { connect, publicKey, connected } = useFreighter();
-  const { balance, loading } = useBalance(publicKey ?? '');
-
-  if (!connected) {
-    return <button onClick={connect}>Connect Freighter</button>;
-  }
-
-  return (
-    <div>
-      <p>Address: {publicKey}</p>
-      <p>Balance: {loading ? 'Loading...' : balance}</p>
-    </div>
-  );
-}
-```
+### `@astronlabs/mock` (Testing Fixtures)
+*   **MockRpc** — Local in-memory Soroban RPC server simulating network latency and failures.
+*   **MockFreighter** — Fake Freighter wallet injector for automated testing.
+*   **MockContract** — State-holding contract simulators that emit mock events.
 
 ---
 
-## @astronlabs/notify
+## Stack
 
-Real-time event streaming from Soroban smart contracts with automatic XDR decoding.
-
-### Features
-- Polls Soroban RPC `getEvents` with configurable intervals
-- Automatic XDR decoding to JavaScript objects
-- Built-in retry logic with exponential backoff
-- Type-safe event filtering
-
-### Example
-
-```typescript
-import { StellarNotify } from '@astronlabs/notify';
-
-const notify = new StellarNotify({
-  rpcUrl: 'https://soroban-testnet.stellar.org',
-  network: 'testnet',
-  pollInterval: 5000,
-});
-
-// Listen for token transfers
-const unsubscribe = notify.onTransfer('CONTRACT_ID', (event) => {
-  console.log('Transfer:', {
-    from: event.data.from,
-    to: event.data.to,
-    amount: event.data.amount,
-  });
-});
-
-// Cleanup
-unsubscribe();
-notify.destroy();
-```
+*   **Core Logic**: TypeScript, Node.js
+*   **Frontend Integrations**: React, `@stellar/stellar-sdk`
+*   **Testing Utilities**: Vitest
+*   **Monorepo Tooling**: `pnpm workspaces` + `changesets`
 
 ---
 
-## @astronlabs/mock
+## Running it locally
 
-Mock implementations for isolated testing without network dependencies.
-
-### Features
-- Mock RPC server with simulated latency
-- Mock contracts with state management
-- Mock Freighter wallet for testing
-- Pre-built fixtures for common scenarios
-
-### Example
-
-```typescript
-import { MockRpc, MockContract, tokenFixture } from '@astronlabs/mock';
-
-const rpc = new MockRpc({ latency: 100 });
-const token = new MockContract(rpc, tokenFixture);
-
-// Simulate events
-token.emit('transfer', {
-  from: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-  to: 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
-  amount: 10000000n,
-});
-```
-
----
-
-## @astronlabs/hooks
-
-React hooks for Stellar blockchain interactions.
-
-### Features
-- `useFreighter` — Wallet connection and transaction signing
-- `useBalance` — Account balance fetching with caching
-- `useSendPayment` — Real payment transactions (Horizon)
-- `useContractCall` — Soroban contract invocation (simulate → sign → submit)
-- `useTransaction` — Transaction status polling with backoff
-
-### Example: Sending Payments
-
-```tsx
-import { useSendPayment } from '@astronlabs/hooks';
-
-function PaymentForm() {
-  const { send, loading, error, result } = useSendPayment();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const result = await send({
-      destination: 'G...',
-      amount: '10',
-      memo: 'Payment for services',
-    });
-    
-    console.log('Transaction:', result.txHash);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <button disabled={loading}>
-        {loading ? 'Sending...' : 'Send 10 XLM'}
-      </button>
-      {error && <p>Error: {error.message}</p>}
-      {result && <p>Success! TX: {result.txHash}</p>}
-    </form>
-  );
-}
-```
-
----
-
-## @astronlabs/forms
-
-Headless form components with Stellar transaction integration.
-
-### Features
-- Render props pattern for full UI control
-- Built-in validation
-- Automatic wallet connection checks
-- Error handling with user-friendly messages
-
-### Example
-
-```tsx
-import { SendPaymentForm } from '@astronlabs/forms';
-
-<SendPaymentForm
-  onSuccess={(result) => console.log('Sent:', result.txHash)}
-  onError={(err) => console.error('Failed:', err.message)}
->
-  {({ handleSubmit, loading, values, onChange, errors }) => (
-    <form onSubmit={handleSubmit}>
-      <input
-        name="destination"
-        value={values.destination}
-        onChange={onChange}
-        placeholder="G..."
-      />
-      {errors.destination && <span>{errors.destination}</span>}
-      
-      <input
-        name="amount"
-        value={values.amount}
-        onChange={onChange}
-        placeholder="Amount in XLM"
-      />
-      {errors.amount && <span>{errors.amount}</span>}
-      
-      <button type="submit" disabled={loading}>
-        {loading ? 'Sending...' : 'Send Payment'}
-      </button>
-    </form>
-  )}
-</SendPaymentForm>
-```
-
----
-
-## Development
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm 8+
-
-### Setup
+### Setup and Compilation
 
 ```bash
 # Clone the repository
 git clone https://github.com/AstronLabs/MergeLabs.git
 cd MergeLabs
 
-# Install dependencies
+# Install dependencies (pnpm is required)
 pnpm install
 
-# Build all packages
+# Build all packages and typings
 pnpm build
-
-# Run tests
-pnpm test
-
-# Run type checking
-pnpm typecheck
 ```
 
-### Scripts
-
-| Command | Description |
-|---------|-------------|
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run unit tests |
-| `pnpm test:integration` | Run tests against live testnet |
-| `pnpm coverage` | Generate coverage reports |
-| `pnpm lint` | Run linting |
-| `pnpm typecheck` | Run TypeScript checks |
-| `pnpm changeset` | Create a changeset for release |
-
-### Project Structure
-
-```
-MergeLabs/
-├── packages/
-│   ├── notify/          # Event streaming
-│   ├── mock/            # Testing utilities
-│   ├── hooks/           # React hooks
-│   └── forms/           # Form components
-├── .github/
-│   └── workflows/       # CI/CD pipelines
-├── pnpm-workspace.yaml  # pnpm workspace config
-└── README.md            # This file
-```
-
----
-
-## Testing
-
-### Unit Tests
+### Running Tests
 
 ```bash
-# Run all tests
+# Run unit tests across all packages
 pnpm test
 
-# Run tests for specific package
-pnpm --filter @astronlabs/notify test
+# Run tests with coverage reports
+pnpm coverage
 
-# Watch mode
-pnpm --filter @astronlabs/hooks test:watch
-```
-
-### Integration Tests
-
-Tests that run against live Stellar testnet infrastructure:
-
-```bash
+# Run integration tests against live testnet
 pnpm test:integration
 ```
 
-These verify real RPC calls, Horizon queries, and event polling work correctly.
-
 ---
 
-## Contributing
+## How it works
 
-We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.
+### Event Stream Architecture
+`@astronlabs/notify` connects to Soroban RPC nodes and polls the `getEvents` endpoint. As new blocks are settled, it runs event topics through a matcher, filtering out noise. The `XdrDecoder` then unpacks the base64 XDR schema:
 
-### Quick Contributing Steps
+```
+[Soroban RPC] ────> [EventPoller] ────> [FilterEngine] ────> [XdrDecoder] ────> [Client Handler]
+   (Base64)         (Ledger Poll)       (Topic Matching)    (BigInt/String)       (Decoded Data)
+```
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Run the test suite (`pnpm test`)
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
+### Contract Execution State Flow
+When performing on-chain contract calls, the `useContractCall` hook manages a multi-step lifecycle under the hood:
+
+1.  **Simulate**: Queries Soroban RPC to identify resource footprints, validation rules, and gas fees.
+2.  **Sign**: Prompts Freighter wallet extension for transaction signatures.
+3.  **Submit**: Broadcasts the signed transaction payload to the network.
+4.  **Poll**: Regularly queries transaction status using `useTransaction` backoff queries until the ledger registers success or failure.
 
 ---
 
 ## Roadmap
 
-- [x] Core hooks with real transaction support
-- [x] Event streaming with XDR decoding
-- [ ] Multi-wallet adapter system (xBull, Albedo, LOBSTR)
-- [ ] Soroswap DEX integration hooks
-- [ ] Blend lending protocol support
-- [ ] CLI tool for project scaffolding
-- [ ] Contract type generator from WASM specs
+*   [x] Core hooks with real transaction support
+*   [x] Event streaming with XDR decoding
+*   [ ] Multi-wallet adapter system (xBull, Albedo, LOBSTR)
+*   [ ] Soroswap DEX integration hooks
+*   [ ] Blend lending protocol support
+*   [ ] CLI tool for project scaffolding
+*   [ ] Contract type generator from WASM specs
+*   [ ] Live polling to track network fees and statistics
+*   [ ] Historical price indices per asset pair
+
+---
+
+## Documentation
+
+*   **[Technical Documentation](documentation/documentation.md)**: Architecture, data flow, package specs, and state diagrams.
+*   **[Contributing Guide](documentation/CONTRIBUTING.md)**: Setup tutorials, command guide, coding standards, and release processes.
 
 ---
 
 ## License
 
-[MIT](./LICENSE) © AstronLabs
-
----
-
-## Acknowledgments
-
-- [Stellar Development Foundation](https://stellar.org) for the Soroban platform
-- [Freighter](https://freighter.app) for wallet integration
-- The Stellar open-source community
-
----
-
-Built with ❤️ for the Stellar ecosystem
+[MIT](LICENSE) © AstronLabs
