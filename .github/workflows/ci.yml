@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  verify:
+    name: Lint, typecheck and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,62 +24,12 @@ jobs:
           node-version: 20
           cache: pnpm
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Lint
         run: pnpm lint
-
-  typecheck:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install
       - name: Type check
         run: pnpm typecheck
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install
-      - name: Run tests
-        run: pnpm test
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install
-      - name: Run coverage
-        run: pnpm coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_MODE: mock

@@ -1,142 +1,139 @@
-# MergeLabs
+# RemitCollateral — Guarantor Dashboard
 
-A TypeScript-first monorepo of production-ready tooling, React hooks, headless forms, and testing mocks for Stellar and Soroban.
+> Crypto-collateralized lending for local beneficiaries who never touch crypto.
 
-Building on Stellar means solving the same problems over and over — wallet connection, event listening, payment forms, testing mocks. MergeLabs solves them once so you can focus on your product.
+The frontend of the RemitCollateral protocol. A diaspora member connects a Stellar
+wallet, locks USDC as collateral, and originates a loan for a relative or business
+contact back home. The beneficiary receives local currency through an off-ramp
+partner, repays through the channel they already use, and never needs a wallet.
 
-It's the Swiss Army knife for Stellar and Soroban integration.
-
-[![CI Status](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml/badge.svg)](https://github.com/AstronLabs/MergeLabs/actions/workflows/ci.yml)
-[![Code Coverage](https://codecov.io/gh/AstronLabs/MergeLabs/branch/main/graph/badge.svg)](https://codecov.io/gh/AstronLabs/MergeLabs)
-[![npm](https://img.shields.io/badge/npm-%40astronlabs-blue)](https://www.npmjs.com/org/astronlabs)
-[![Docs](https://img.shields.io/badge/docs-technical-green)](documentation/documentation.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
----
-
-## Motivation
-
-Integrating with Stellar and Soroban can feel repetitive. Developers must build transaction polling mechanisms, decode complex XDR data formats, hand-craft forms, and set up mock RPCs to test basic client-side functionality. Consumer wallets and Horizon endpoints present separate integration challenges, meaning developers write hundreds of lines of boilerplate before writing their first line of application logic.
-
-MergeLabs makes Stellar integration legible and seamless:
-
-*   **Connect and manage wallets**: Connect wallets like Freighter, and handle public keys and signatures without boilerplate.
-*   **Stream contract events**: Stream live Soroban events using a cursor-tracked engine that decodes raw XDR data into native JavaScript primitives.
-*   **Generate forms with validation**: Implement headless transaction forms for sending, trusting, or swapping assets using the render props pattern.
-*   **Test offline**: Mock Freighter wallets, smart contracts, and RPC servers locally using robust testing fixtures.
+This repository is the guarantor's view of that system: what their collateral is
+doing, which loans it backs, what is due next, and — stated plainly, before they
+commit — what they stand to lose.
 
 ---
 
-## Features
+## Quick start
 
-### `@astronlabs/hooks` (React Hooks)
-*   **StellarProvider** — Global context setup for testnet/mainnet network parameters.
-*   **useFreighter** — React hook for Freighter wallet connection status and transaction signing.
-*   **useBalance** — Cache-optimized hook for retrieving XLM and custom Stellar Asset Contract (SAC) token balances.
-*   **useContractCall** — Stateful Soroban contract invocation (simulate $\rightarrow$ sign $\rightarrow$ submit $\rightarrow$ poll).
-*   **useSendPayment** — Quick Horizon payment builder.
-*   **useTransaction** — RPC poll engine with built-in exponential backoff.
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm dev
+```
 
-### `@astronlabs/notify` (Event Streaming)
-*   **StellarNotify** — High-performance event polling class with configurable intervals.
-*   **Cursor Tracking** — Remembers and resumes from the last seen ledger sequence to prevent missed events.
-*   **Type-safe Filters** — Topic-based and contract-based routing criteria.
-*   **XDR Decoder** — Automatically parses raw base64 XDR events into JS values (strings, bigints, numbers).
+Open http://localhost:3000. The app ships with `NEXT_PUBLIC_API_MODE=mock`, so it
+runs fully without a backend: a simulated wallet stands in for Freighter, and a
+seeded in-memory dataset drives every screen.
 
-### `@astronlabs/forms` (Headless UI Components)
-*   **ConnectWalletButton** — Interactive button helper handling wallet status.
-*   **SendPaymentForm** — Form handler for native and custom token payments with validation.
-*   **TrustlineForm** — Headless component to establish token trustlines.
-*   **SwapForm** — Orchestrator for DEX swaps with slippage and path calculations.
+## Scripts
 
-### `@astronlabs/mock` (Testing Fixtures)
-*   **MockRpc** — Local in-memory Soroban RPC server simulating network latency and failures.
-*   **MockFreighter** — Fake Freighter wallet injector for automated testing.
-*   **MockContract** — State-holding contract simulators that emit mock events.
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Development server on port 3000 |
+| `pnpm build` | Production build |
+| `pnpm start` | Serve the production build |
+| `pnpm lint` | ESLint via `next lint` |
+| `pnpm typecheck` | `tsc --noEmit` |
+
+## Environment
+
+| Variable | Values | Description |
+|----------|--------|-------------|
+| `NEXT_PUBLIC_API_MODE` | `mock` \| `live` | `mock` uses the in-memory backend; `live` calls the real API |
+| `NEXT_PUBLIC_API_URL` | URL | Backend base URL, used when mode is `live` |
+| `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` \| `public` | Network the guarantor's wallet must be on |
 
 ---
+
+## Screens
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Connect a Stellar wallet; explains the model and the risk before sign-in |
+| `/dashboard` | Collateral position, open loans, upcoming installments, loans at risk |
+| `/loans` | Every loan the guarantor's collateral backs, filterable by status |
+| `/loans/new` | Originate a loan, with a live quote of the collateral it costs |
+| `/loans/[id]` | Repayment progress, installment schedule, partner attestations |
+| `/beneficiaries` | Linked beneficiaries and their reputation scores |
+| `/beneficiaries/[id]` | Reputation breakdown, loan history, remittance history |
+| `/vault` | Deposit and withdraw USDC; collateral utilisation |
+| `/remittances` | Remittance history — the cold-start credit signal |
+
+---
+
+## Architecture
+
+```
+app/
+  page.tsx              Connect screen (unauthenticated)
+  (app)/                Everything behind a connected wallet
+    dashboard/ loans/ beneficiaries/ vault/ remittances/
+components/
+  providers/            Session context: challenge → sign → token
+  ui/                   Design primitives (Card, StatTile, Badge, …)
+lib/
+  api/
+    types.ts            The transport interface — one method per endpoint
+    http.ts             Live implementation against NEXT_PUBLIC_API_URL
+    mock/               In-memory backend: fixtures, protocol math, store
+    quote.ts            Pre-origination loan quote, derived client-side
+  stellar/freighter.ts  Wallet connection and challenge signing
+  types.ts              Domain types mirroring the backend data model
+```
+
+### The data layer
+
+Every screen imports a single `api` object. It resolves to one of two
+implementations of the same `RemitCollateralApi` interface, chosen by
+`NEXT_PUBLIC_API_MODE`:
+
+- **`mock`** — an in-memory backend with seeded data and real protocol math:
+  reputation scoring, LTV adjustment, schedule generation, and proportional
+  collateral release. Mutations persist for the tab's lifetime, so originating a
+  loan or recording a deposit is reflected everywhere. A reload resets it.
+- **`live`** — `fetch` against the backend, with the session token attached as a
+  bearer credential and `401` clearing the session.
+
+Switching between them is one environment variable. No screen changes.
+
+### Authentication
+
+Wallet challenge-response, exactly as the backend defines it:
+
+1. `connectWallet()` reads the public key from Freighter.
+2. `GET /auth/challenge` returns a string to sign.
+3. Freighter signs it — a message signature, not a transaction, so there is no fee.
+4. `POST /auth/verify` exchanges the signature for a session token.
+
+The token and guarantor profile are held in `localStorage`; `(app)/layout.tsx`
+redirects to the connect screen without them.
+
+### Trust model in the UI
+
+The protocol's trust boundaries are visible rather than buried:
+
+- Repayments show **who attested them** — only partner-signed attestations are
+  accepted, never a claim from the beneficiary or the guarantor.
+- Self-declared remittances are labelled as such and shown as weighted at zero.
+- Remittance history below the six-month minimum is marked as not yet counting.
+- Default risk appears on the origination screen **before** the loan is created,
+  with the exact figure at stake.
+
+---
+
+## Repository boundaries
+
+| Repository | Responsibility |
+|------------|---------------|
+| `remitcollateral-frontend` (this repo) | Guarantor dashboard (Next.js) |
+| `remitcollateral-backend` | API server, business logic, database, off-ramp adapter, reputation engine |
+| `remitcollateral-contracts` | Soroban contracts (GuarantorVault, LoanLedger, LiquidationEngine) |
+| `remitcollateral-docs` | Protocol documentation and integration guides |
 
 ## Stack
 
-*   **Core Logic**: TypeScript, Node.js
-*   **Frontend Integrations**: React, `@stellar/stellar-sdk`
-*   **Testing Utilities**: Vitest
-*   **Monorepo Tooling**: `pnpm workspaces` + `changesets`
-
----
-
-## Running it locally
-
-### Setup and Compilation
-
-```bash
-# Clone the repository
-git clone https://github.com/AstronLabs/MergeLabs.git
-cd MergeLabs
-
-# Install dependencies (pnpm is required)
-pnpm install
-
-# Build all packages and typings
-pnpm build
-```
-
-### Running Tests
-
-```bash
-# Run unit tests across all packages
-pnpm test
-
-# Run tests with coverage reports
-pnpm coverage
-
-# Run integration tests against live testnet
-pnpm test:integration
-```
-
----
-
-## How it works
-
-### Event Stream Architecture
-`@astronlabs/notify` connects to Soroban RPC nodes and polls the `getEvents` endpoint. As new blocks are settled, it runs event topics through a matcher, filtering out noise. The `XdrDecoder` then unpacks the base64 XDR schema:
-
-```
-[Soroban RPC] ────> [EventPoller] ────> [FilterEngine] ────> [XdrDecoder] ────> [Client Handler]
-   (Base64)         (Ledger Poll)       (Topic Matching)    (BigInt/String)       (Decoded Data)
-```
-
-### Contract Execution State Flow
-When performing on-chain contract calls, the `useContractCall` hook manages a multi-step lifecycle under the hood:
-
-1.  **Simulate**: Queries Soroban RPC to identify resource footprints, validation rules, and gas fees.
-2.  **Sign**: Prompts Freighter wallet extension for transaction signatures.
-3.  **Submit**: Broadcasts the signed transaction payload to the network.
-4.  **Poll**: Regularly queries transaction status using `useTransaction` backoff queries until the ledger registers success or failure.
-
----
-
-## Roadmap
-
-*   [x] Core hooks with real transaction support
-*   [x] Event streaming with XDR decoding
-*   [ ] Multi-wallet adapter system (xBull, Albedo, LOBSTR)
-*   [ ] Soroswap DEX integration hooks
-*   [ ] Blend lending protocol support
-*   [ ] CLI tool for project scaffolding
-*   [ ] Contract type generator from WASM specs
-*   [ ] Live polling to track network fees and statistics
-*   [ ] Historical price indices per asset pair
-
----
-
-## Documentation
-
-*   **[Technical Documentation](documentation/documentation.md)**: Architecture, data flow, package specs, and state diagrams.
-*   **[Contributing Guide](documentation/CONTRIBUTING.md)**: Setup tutorials, command guide, coding standards, and release processes.
-
----
+Next.js 14 (App Router) · React 18 · TypeScript (strict) · Tailwind CSS · Freighter
 
 ## License
 
-[MIT](LICENSE) © AstronLabs
+MIT — see [LICENSE](LICENSE).
