@@ -140,7 +140,8 @@ export interface CreateLoanInput {
 /** Payload for POST /beneficiaries. */
 export interface CreateBeneficiaryInput {
   phone_number: string;
-  local_kyc_ref?: string;
+  /** From the off-ramp partner. The backend requires it: it is how the partner identifies the beneficiary. */
+  local_kyc_ref: string;
   display_name?: string;
   local_currency: CurrencyCode;
 }

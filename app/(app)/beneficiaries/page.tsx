@@ -39,7 +39,7 @@ export default function BeneficiariesPage() {
       await api.createBeneficiary({
         phone_number: phone.trim(),
         display_name: displayName.trim() || undefined,
-        local_kyc_ref: kycRef.trim() || undefined,
+        local_kyc_ref: kycRef.trim(),
         local_currency: currency,
       });
       setDisplayName('');
@@ -99,6 +99,7 @@ export default function BeneficiariesPage() {
                 value={kycRef}
                 onChange={(e) => setKycRef(e.target.value)}
                 placeholder="PARTNER-NG-00000"
+                required
               />
             </Field>
             <Field label="Local currency">
