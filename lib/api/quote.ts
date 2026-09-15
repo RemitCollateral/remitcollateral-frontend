@@ -1,37 +1,28 @@
 /**
  * Builds the pre-origination quote the guarantor sees before committing.
  *
- * This is derived, not fetched: it composes the beneficiary's reputation and
- * the vault balance, both of which the backend already exposes. Keeping it
- * client-side means the loan form can react as the guarantor types without a
- * round trip per keystroke — and it works identically against mock and live.
+ * It composes the beneficiary's reputation, the vault balance and the
+ * off-ramp partner's exchange rate, all fetched from the API, so the preview
+ * prices the loan at the same rate the backend will use to originate it. It
+ * works identically against mock and live.
  */
 
 import { PROTOCOL } from '@/lib/config';
 import type { CreateLoanInput, LoanQuote } from '@/lib/types';
-import { MOCK_FX_RATES } from './mock/protocol';
 import { buildSchedule } from './mock/protocol';
 import type { RemitCollateralApi } from './types';
-
-/**
- * Converts local currency to USD. The backend prices the loan authoritatively
- * at origination; this indicative rate only drives the preview.
- */
-function toUsd(amount: number, currency: string): number {
-  const rate = MOCK_FX_RATES[currency] ?? 1;
-  return Math.round((amount / rate) * 100) / 100;
-}
 
 export async function buildLoanQuote(
   api: RemitCollateralApi,
   input: CreateLoanInput,
 ): Promise<LoanQuote> {
-  const [reputation, vault] = await Promise.all([
+  const [reputation, vault, rate] = await Promise.all([
     api.getReputation(input.beneficiary_id),
     api.getVault(),
+    api.getExchangeRate(input.local_currency),
   ]);
 
-  const principalUsd = toUsd(input.principal_local, input.local_currency);
+  const principalUsd = Math.round((input.principal_local / rate.local_per_usd) * 100) / 100;
   const requiredCollateral = Math.round(principalUsd * reputation.qualified_ltv * 100) / 100;
 
   return {

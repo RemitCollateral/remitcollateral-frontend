@@ -66,6 +66,8 @@ export const httpApi: RemitCollateralApi = {
   createBeneficiary: (input) => post('/beneficiaries', input),
   getReputation: (id) => request(`/beneficiaries/${id}/reputation`),
 
+  getExchangeRate: (currency) => request(`/fx/rates/${encodeURIComponent(currency)}`),
+
   listLoans: () => request('/loans'),
   getLoan: (id) => request(`/loans/${id}`),
   getLoanSchedule: (id) => request(`/loans/${id}/schedule`),

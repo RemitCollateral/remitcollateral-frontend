@@ -3,8 +3,9 @@
  * Every call is wrapped in a small latency so loading states are real.
  */
 
-import type { RemitCollateralApi } from '../types';
+import { ApiError, type RemitCollateralApi } from '../types';
 import { mockStore } from './store';
+import { MOCK_FX_RATES } from './protocol';
 import { MOCK_WALLET } from './fixtures';
 
 const LATENCY_MS = 220;
@@ -51,6 +52,15 @@ export const mockApi: RemitCollateralApi = {
   getBeneficiary: (id) => delay(() => mockStore.beneficiary(id)),
   createBeneficiary: (input) => delay(() => mockStore.createBeneficiary(input)),
   getReputation: (id) => delay(() => mockStore.reputation(id)),
+
+  getExchangeRate: (currency) =>
+    delay(() => {
+      const rate = MOCK_FX_RATES[currency];
+      if (!rate) {
+        throw new ApiError(`The off-ramp partner does not pay out in ${currency}`, 400);
+      }
+      return { local_currency: currency, local_per_usd: rate, quoted_at: new Date().toISOString() };
+    }),
 
   listLoans: () => delay(() => mockStore.loans()),
   getLoan: (id) => delay(() => mockStore.loan(id)),

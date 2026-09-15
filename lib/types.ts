@@ -156,6 +156,14 @@ export interface CreateRemittanceInput {
   source: RemittanceSource;
 }
 
+/** The off-ramp partner's rate for paying out in a local currency. */
+export interface ExchangeRate {
+  local_currency: CurrencyCode;
+  /** Local currency units per 1 USD. */
+  local_per_usd: number;
+  quoted_at: Timestamp;
+}
+
 /**
  * What a loan would cost the guarantor, computed before origination so the
  * risk is visible up front rather than buried in fine print.

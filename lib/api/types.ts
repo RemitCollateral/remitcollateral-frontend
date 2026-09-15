@@ -10,7 +10,9 @@ import type {
   CreateBeneficiaryInput,
   CreateLoanInput,
   CreateRemittanceInput,
+  CurrencyCode,
   DashboardData,
+  ExchangeRate,
   Guarantor,
   Loan,
   LoanWithBeneficiary,
@@ -48,6 +50,9 @@ export interface RemitCollateralApi {
   createBeneficiary(input: CreateBeneficiaryInput): Promise<Beneficiary>;
   /** GET /beneficiaries/:id/reputation */
   getReputation(id: UUID): Promise<ReputationBreakdown>;
+
+  /** GET /fx/rates/:currency — the partner's rate a loan is priced at. */
+  getExchangeRate(currency: CurrencyCode): Promise<ExchangeRate>;
 
   /** GET /loans */
   listLoans(): Promise<LoanWithBeneficiary[]>;
