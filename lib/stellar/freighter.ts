@@ -2,8 +2,9 @@
  * Thin wrapper over the Freighter browser extension.
  *
  * Freighter injects `window.freighterApi`, so no SDK dependency is needed for
- * the two things guarantor auth requires: reading the public key, and signing
- * the backend's challenge. In mock mode a simulated wallet stands in, so the
+ * what the dashboard needs from a wallet: reading the public key, signing the
+ * backend's sign-in challenge, and signing the transactions that move the
+ * guarantor's collateral. In mock mode a simulated wallet stands in, so the
  * dashboard is usable without the extension installed.
  */
 
@@ -23,6 +24,10 @@ interface FreighterApi {
     blob: string,
     opts?: { network?: string; accountToSign?: string },
   ) => Promise<string | { signedBlob: string; error?: string }>;
+  signTransaction?: (
+    xdr: string,
+    opts?: { network?: string; networkPassphrase?: string; address?: string; accountToSign?: string },
+  ) => Promise<string | { signedTxXdr: string; signerAddress?: string; error?: string }>;
 }
 
 declare global {
@@ -130,4 +135,31 @@ export async function signChallenge(
   }
 
   throw new WalletError('This version of Freighter cannot sign messages.');
+}
+
+/**
+ * Signs a transaction the backend prepared, as the given account. With the
+ * contracts connected, every movement of the guarantor's collateral needs
+ * this signature: a deposit, a withdrawal, or a new loan.
+ */
+export async function signTransaction(
+  xdr: string,
+  networkPassphrase: string,
+  address: string,
+): Promise<string> {
+  const api = extension();
+  if (!api) {
+    throw new WalletError('Freighter was not detected. Install the extension to sign transactions.');
+  }
+  if (!api.signTransaction) {
+    throw new WalletError('This version of Freighter cannot sign transactions.');
+  }
+
+  const result = await api.signTransaction(xdr, {
+    network: STELLAR_NETWORK,
+    networkPassphrase,
+    address,
+    accountToSign: address,
+  });
+  return unwrap(result, 'signedTxXdr');
 }
