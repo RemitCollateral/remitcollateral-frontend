@@ -164,6 +164,10 @@ The protocol's trust boundaries are visible rather than buried:
 
 Next.js 14 (App Router) · React 18 · TypeScript (strict) · Tailwind CSS · Freighter
 
+## Contributing
+
+Start with the [contributing guide](https://github.com/RemitCollateral/remitcollateral-docs/blob/main/CONTRIBUTING.md) in `remitcollateral-docs`. It covers how to pick an issue, which repository a change belongs in, how to run and check the frontend, the protocol rules every change must keep, and how to open a pull request. Report vulnerabilities privately, as the [security policy](https://github.com/RemitCollateral/remitcollateral-docs/blob/main/SECURITY.md) describes, not in a public issue.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
