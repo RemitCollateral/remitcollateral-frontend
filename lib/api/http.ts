@@ -5,7 +5,6 @@
 
 import { API_URL } from '@/lib/config';
 import { getSessionToken, clearSession } from '@/lib/session';
-import type { Beneficiary, DashboardData } from '@/lib/types';
 import { ApiError, type RemitCollateralApi } from './types';
 
 async function request<T>(
@@ -62,16 +61,7 @@ export const httpApi: RemitCollateralApi = {
     post('/vaults/deposit', { amount_usd: amountUsd, tx_hash: txHash }),
   withdrawCollateral: (amountUsd) => post('/vaults/withdraw', { amount_usd: amountUsd }),
 
-  // v1 has no list endpoint for beneficiaries — they are reachable through the
-  // dashboard payload, which carries every beneficiary the guarantor has linked.
-  listBeneficiaries: async () => {
-    const dashboard = await request<DashboardData>('/guarantors/me/dashboard');
-    const byId = new Map<string, Beneficiary>();
-    for (const loan of dashboard.loans) {
-      byId.set(loan.beneficiary.id, loan.beneficiary);
-    }
-    return [...byId.values()];
-  },
+  listBeneficiaries: () => request('/beneficiaries'),
   getBeneficiary: (id) => request(`/beneficiaries/${id}`),
   createBeneficiary: (input) => post('/beneficiaries', input),
   getReputation: (id) => request(`/beneficiaries/${id}/reputation`),

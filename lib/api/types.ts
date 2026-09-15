@@ -40,7 +40,7 @@ export interface RemitCollateralApi {
   /** POST /vaults/withdraw */
   withdrawCollateral(amountUsd: number): Promise<VaultSummary>;
 
-  /** Derived from the dashboard payload; the backend has no list endpoint in v1. */
+  /** GET /beneficiaries */
   listBeneficiaries(): Promise<Beneficiary[]>;
   /** GET /beneficiaries/:id */
   getBeneficiary(id: UUID): Promise<Beneficiary>;
