@@ -6,7 +6,7 @@ export const API_MODE: ApiMode =
   process.env.NEXT_PUBLIC_API_MODE === 'live' ? 'live' : 'mock';
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 
 export const STELLAR_NETWORK =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet';
