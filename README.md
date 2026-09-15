@@ -43,6 +43,10 @@ seeded in-memory dataset drives every screen.
 | `NEXT_PUBLIC_API_URL` | URL | Backend base URL, used when mode is `live` |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` \| `public` | Network the guarantor's wallet must be on |
 
+In `live` mode the dashboard also asks the backend whether it is connected to the
+Soroban contracts (`GET /chain`). When it is, collateral moves only with the
+guarantor's wallet signature — see [Wallet signing](#wallet-signing).
+
 ---
 
 ## Screens
@@ -76,8 +80,8 @@ lib/
     types.ts            The transport interface — one method per endpoint
     http.ts             Live implementation against NEXT_PUBLIC_API_URL
     mock/               In-memory backend: fixtures, protocol math, store
-    quote.ts            Pre-origination loan quote, derived client-side
-  stellar/freighter.ts  Wallet connection and challenge signing
+    quote.ts            Pre-origination loan quote, priced at the partner's exchange rate
+  stellar/freighter.ts  Wallet connection, sign-in signing and transaction signing
   types.ts              Domain types mirroring the backend data model
 ```
 
@@ -91,8 +95,12 @@ implementations of the same `RemitCollateralApi` interface, chosen by
   reputation scoring, LTV adjustment, schedule generation, and proportional
   collateral release. Mutations persist for the tab's lifetime, so originating a
   loan or recording a deposit is reflected everywhere. A reload resets it.
+  Exchange rates are fixed indicative figures for NGN, GHS, XOF, KES and USD.
 - **`live`** — `fetch` against the backend, with the session token attached as a
-  bearer credential and `401` clearing the session.
+  bearer credential and `401` clearing the session. Beneficiaries come from
+  `GET /beneficiaries`, and loan quotes use the off-ramp partner's rate from
+  `GET /fx/rates/:currency`, so the collateral a quote shows is the collateral the
+  backend will lock.
 
 Switching between them is one environment variable. No screen changes.
 
@@ -101,12 +109,32 @@ Switching between them is one environment variable. No screen changes.
 Wallet challenge-response, exactly as the backend defines it:
 
 1. `connectWallet()` reads the public key from Freighter.
-2. `GET /auth/challenge` returns a string to sign.
-3. Freighter signs it — a message signature, not a transaction, so there is no fee.
+2. `GET /auth/challenge` returns a message naming the service, the wallet, a
+   one-time nonce and an expiry.
+3. Freighter signs it with `signMessage` (SEP-53) — a message signature, not a
+   transaction, so there is no fee.
 4. `POST /auth/verify` exchanges the signature for a session token.
 
 The token and guarantor profile are held in `localStorage`; `(app)/layout.tsx`
 redirects to the connect screen without them.
+
+### Wallet signing
+
+When the backend is connected to the contracts, a deposit, a withdrawal or a new
+loan is a Stellar transaction the guarantor must sign: the vault and ledger
+contracts accept nothing else. The live API does this inside the same
+`depositCollateral`, `withdrawCollateral` and `createLoan` calls the pages already
+use, so no screen knows the difference:
+
+1. `POST …/prepare` — the backend builds the transaction, and refuses up front
+   anything the contracts would reject, such as withdrawing locked collateral.
+2. Freighter's `signTransaction` signs it as the signed-in account. Unlike
+   sign-in, this is a real transaction with a small network fee.
+3. `POST …/submit` — the backend submits it, accepting only the exact
+   transaction it prepared.
+
+Without the contracts connected, the same calls go to the backend's direct
+endpoints and nothing is signed. In mock mode there is no wallet prompt at all.
 
 ### Trust model in the UI
 
@@ -118,6 +146,8 @@ The protocol's trust boundaries are visible rather than buried:
 - Remittance history below the six-month minimum is marked as not yet counting.
 - Default risk appears on the origination screen **before** the loan is created,
   with the exact figure at stake.
+- A beneficiary's partner **KYC reference is required**: it is how the partner
+  identifies them, and what links two guarantors supporting the same person.
 
 ---
 
@@ -127,7 +157,7 @@ The protocol's trust boundaries are visible rather than buried:
 |------------|---------------|
 | `remitcollateral-frontend` (this repo) | Guarantor dashboard (Next.js) |
 | `remitcollateral-backend` | API server, business logic, database, off-ramp adapter, reputation engine |
-| `remitcollateral-contracts` | Soroban contracts (GuarantorVault, LoanLedger, LiquidationEngine) |
+| `remitcollateral-contract` | Soroban contracts (GuarantorVault, LoanLedger, LiquidationEngine) |
 | `remitcollateral-docs` | Protocol documentation and integration guides |
 
 ## Stack
