@@ -19,7 +19,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { clearSession, getSessionToken, getStoredGuarantor, saveSession } from '@/lib/session';
-import { connectWallet, signChallenge } from '@/lib/stellar/freighter';
+import { connectWallet, getActiveWalletAddress, isFreighterInstalled, signChallenge } from '@/lib/stellar/freighter';
 import type { Guarantor } from '@/lib/types';
 
 type SessionStatus = 'loading' | 'connected' | 'disconnected';
@@ -53,6 +53,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setStatus('disconnected');
     }
   }, []);
+
+  // Watch for active Freighter account changes to prevent desynced transactions
+  useEffect(() => {
+    if (!guarantor || !isFreighterInstalled()) return;
+
+    const interval = setInterval(async () => {
+      const active = await getActiveWalletAddress();
+      if (active && active !== guarantor.wallet_address) {
+        clearSession();
+        setGuarantor(null);
+        setStatus('disconnected');
+        setError('Freighter account changed. Please reconnect with your new account.');
+        router.push('/');
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [guarantor, router]);
 
   const connect = useCallback(async () => {
     setConnecting(true);
