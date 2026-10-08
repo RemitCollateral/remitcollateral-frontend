@@ -142,6 +142,34 @@ export function ButtonLink({
   );
 }
 
+/** Secure External Link component enforcing rel="noopener noreferrer" and target="_blank" */
+export function ExternalLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const isSecure = href.startsWith('https://') || href.startsWith('http://');
+  const safeHref = isSecure ? href : '#';
+
+  return (
+    <a
+      href={safeHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cx('inline-flex items-center gap-1 hover:underline', className)}
+    >
+      {children}
+      <span className="text-xs" aria-hidden="true">
+        ↗
+      </span>
+    </a>
+  );
+}
+
 export function Field({
   label,
   hint,
