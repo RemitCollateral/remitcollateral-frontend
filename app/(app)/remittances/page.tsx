@@ -62,6 +62,39 @@ export default function RemittancesPage() {
     } finally {
       setSubmitting(false);
     }
+  function exportCsv() {
+    if (!remittances.data || remittances.data.length === 0) return;
+
+    const headers = [
+      'ID',
+      'Beneficiary',
+      'Amount USD',
+      'Local Amount',
+      'Currency',
+      'Source',
+      'Sent At',
+    ];
+
+    const rows = remittances.data.map((r) => [
+      `"${r.id}"`,
+      `"${nameFor(r.beneficiary_id).replace(/"/g, '""')}"`,
+      r.amount_usd,
+      r.local_amount,
+      `"${r.local_currency}"`,
+      `"${r.source}"`,
+      `"${r.sent_at}"`,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `remittances-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -70,12 +103,19 @@ export default function RemittancesPage() {
         title="Remittances"
         description="Money you already send is the cold-start credit signal. Partner-reported transfers build a beneficiary's score before they have ever taken a loan."
         action={
-          <Button
-            variant={showForm ? 'secondary' : 'primary'}
-            onClick={() => setShowForm((v) => !v)}
-          >
-            {showForm ? 'Cancel' : 'Record a remittance'}
-          </Button>
+          <div className="flex gap-2">
+            {remittances.data && remittances.data.length > 0 && (
+              <Button variant="secondary" onClick={exportCsv}>
+                Export CSV
+              </Button>
+            )}
+            <Button
+              variant={showForm ? 'secondary' : 'primary'}
+              onClick={() => setShowForm((v) => !v)}
+            >
+              {showForm ? 'Cancel' : 'Record a remittance'}
+            </Button>
+          </div>
         }
       />
 
