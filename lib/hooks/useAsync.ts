@@ -10,13 +10,28 @@ export interface AsyncState<T> {
   reload: () => void;
 }
 
+// Global client cache map for stale-while-revalidate behavior
+const memoryCache = new Map<string, { data: unknown; timestamp: number }>();
+
+export interface AsyncOptions {
+  key?: string;
+  cacheTtlMs?: number;
+}
+
 /**
- * Runs an async loader on mount and whenever `deps` change, with the
- * loading/error handling every screen in the dashboard needs.
+ * Runs an async loader on mount and whenever `deps` change, with SWR caching
+ * to eliminate UI flicker and layout shift between route navigation.
  */
-export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): AsyncState<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAsync<T>(
+  loader: () => Promise<T>,
+  deps: unknown[] = [],
+  options: AsyncOptions = {}
+): AsyncState<T> {
+  const { key, cacheTtlMs = 60_000 } = options;
+  const cached = key ? (memoryCache.get(key)?.data as T | undefined) : undefined;
+
+  const [data, setData] = useState<T | null>(cached ?? null);
+  const [loading, setLoading] = useState(cached === undefined);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
@@ -26,13 +41,22 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): Asy
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+
+    // If no cached data exists, set loading state
+    if (!cached) {
+      setLoading(true);
+    }
     setError(null);
 
     loaderRef
       .current()
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          if (key) {
+            memoryCache.set(key, { data: result, timestamp: Date.now() });
+          }
+        }
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
@@ -49,7 +73,11 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): Asy
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nonce, ...deps]);
 
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const reload = useCallback(() => {
+    if (key) memoryCache.delete(key);
+    setNonce((n) => n + 1);
+  }, [key]);
 
   return { data, loading, error, reload };
 }
+
