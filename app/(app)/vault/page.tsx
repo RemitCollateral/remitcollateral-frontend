@@ -29,6 +29,7 @@ export default function VaultPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [txStep, setTxStep] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -41,13 +42,16 @@ export default function VaultPage() {
     setSubmitting(true);
     setFormError(null);
     setNotice(null);
+    setTxStep('Preparing transaction...');
     try {
       if (action === 'deposit') {
+        setTxStep('Awaiting wallet signature & settlement confirmation...');
         await api.depositCollateral(value);
-        setNotice(`Deposited ${formatUsd(value)} into your vault.`);
+        setNotice(`Successfully settled ${formatUsd(value)} deposit into your vault.`);
       } else {
+        setTxStep('Awaiting wallet signature & withdrawal processing...');
         await api.withdrawCollateral(value);
-        setNotice(`Withdrew ${formatUsd(value)} to your wallet.`);
+        setNotice(`Successfully withdrew ${formatUsd(value)} to your wallet.`);
       }
       setAmount('');
       reload();
@@ -55,6 +59,7 @@ export default function VaultPage() {
       setFormError(cause instanceof Error ? cause.message : 'The transaction failed.');
     } finally {
       setSubmitting(false);
+      setTxStep(null);
     }
   }
 
@@ -157,13 +162,18 @@ export default function VaultPage() {
             </Field>
 
             {formError && <ErrorNotice message={formError} />}
+            {txStep && (
+              <p className="rounded-lg bg-surface-sunken px-3 py-2 text-xs font-mono text-ink-muted animate-pulse">
+                ⏳ {txStep}
+              </p>
+            )}
             {notice && (
               <p className="rounded-lg bg-good-soft px-3 py-2 text-sm text-good">{notice}</p>
             )}
 
             <Button type="submit" disabled={submitting}>
               {submitting
-                ? 'Submitting…'
+                ? (txStep || 'Submitting…')
                 : action === 'deposit'
                   ? 'Deposit USDC'
                   : 'Withdraw USDC'}
