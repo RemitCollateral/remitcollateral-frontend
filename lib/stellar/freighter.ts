@@ -101,6 +101,22 @@ export async function connectWallet(): Promise<string> {
   throw new WalletError('This version of Freighter is not supported.');
 }
 
+/** Non-intrusively retrieves current public key without triggering access dialog. */
+export async function getActiveWalletAddress(): Promise<string | null> {
+  const api = extension();
+  if (!api) return API_MODE === 'mock' ? MOCK_ADDRESS : null;
+  try {
+    if (api.getAddress) {
+      const res = await api.getAddress();
+      return typeof res === 'object' && res.address ? res.address : null;
+    }
+    if (api.getPublicKey) return await api.getPublicKey();
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /**
  * Signs the backend's auth challenge. The signature is what `POST /auth/verify`
  * exchanges for a session token.
