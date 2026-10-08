@@ -6,6 +6,7 @@
 import { API_URL } from '@/lib/config';
 import { getSessionToken, clearSession, getStoredGuarantor } from '@/lib/session';
 import { signTransaction } from '@/lib/stellar/freighter';
+import type { Beneficiary } from '@/lib/types';
 import { ApiError, type RemitCollateralApi } from './types';
 
 async function request<T>(
@@ -104,9 +105,58 @@ export const httpApi: RemitCollateralApi = {
       ? signed('/vaults/withdraw', { amount_usd: amountUsd })
       : post('/vaults/withdraw', { amount_usd: amountUsd }),
 
-  listBeneficiaries: () => request('/beneficiaries'),
+  listBeneficiaries: async () => {
+    try {
+      const direct = await request<Beneficiary[]>('/beneficiaries');
+      if (Array.isArray(direct)) return direct;
+    } catch {
+      // Fallback if GET /beneficiaries list endpoint is unsupported
+    }
+
+    const byId = new Map<string, Beneficiary>();
+    try {
+      const dashboard = await request<{ loans?: Array<{ beneficiary: Beneficiary }> }>('/guarantors/me/dashboard');
+      for (const loan of dashboard.loans ?? []) {
+        if (loan?.beneficiary?.id) {
+          byId.set(loan.beneficiary.id, loan.beneficiary);
+        }
+      }
+    } catch {
+      // Ignore dashboard fetch error and continue with local cache
+    }
+
+    // Hydrate any beneficiaries registered locally in this browser
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(window.localStorage.getItem('rc.registered_beneficiaries') || '[]');
+        if (Array.isArray(stored)) {
+          for (const b of stored) {
+            if (b?.id && !byId.has(b.id)) {
+              byId.set(b.id, b);
+            }
+          }
+        }
+      } catch {
+        // Ignore storage parse error
+      }
+    }
+
+    return [...byId.values()];
+  },
   getBeneficiary: (id) => request(`/beneficiaries/${id}`),
-  createBeneficiary: (input) => post('/beneficiaries', input),
+  createBeneficiary: async (input) => {
+    const created = await post<Beneficiary>('/beneficiaries', input);
+    if (typeof window !== 'undefined' && created?.id) {
+      try {
+        const existing = JSON.parse(window.localStorage.getItem('rc.registered_beneficiaries') || '[]');
+        const updated = [created, ...existing.filter((b: Beneficiary) => b?.id !== created.id)];
+        window.localStorage.setItem('rc.registered_beneficiaries', JSON.stringify(updated.slice(0, 50)));
+      } catch {
+        // Ignore storage write error
+      }
+    }
+    return created;
+  },
   getReputation: (id) => request(`/beneficiaries/${id}/reputation`),
 
   getExchangeRate: (currency) => request(`/fx/rates/${encodeURIComponent(currency)}`),
