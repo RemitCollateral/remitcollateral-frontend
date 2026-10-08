@@ -31,15 +31,33 @@ export default function BeneficiariesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // E.164 format: + followed by 7 to 15 digits
+  const e164Regex = /^\+[1-9]\d{6,14}$/;
+  const isPhoneValid = phone.trim() === '' || e164Regex.test(phone.trim().replace(/[\s-]/g, ''));
+  const isKycValid = kycRef.trim() === '' || /^[a-zA-Z0-9_-]{3,32}$/.test(kycRef.trim());
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
     setFormError(null);
+
+    const normalizedPhone = phone.trim().replace(/[\s-]/g, '');
+    if (!e164Regex.test(normalizedPhone)) {
+      setFormError('Phone number must be in international E.164 format (e.g. +2348031234567).');
+      return;
+    }
+
+    const trimmedKyc = kycRef.trim();
+    if (!/^[a-zA-Z0-9_-]{3,32}$/.test(trimmedKyc)) {
+      setFormError('Partner KYC reference must be 3-32 alphanumeric characters, dashes, or underscores.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await api.createBeneficiary({
-        phone_number: phone.trim(),
+        phone_number: normalizedPhone,
         display_name: displayName.trim() || undefined,
-        local_kyc_ref: kycRef.trim(),
+        local_kyc_ref: trimmedKyc,
         local_currency: currency,
       });
       setDisplayName('');
@@ -83,9 +101,13 @@ export default function BeneficiariesPage() {
                 placeholder="Amaka Obi"
               />
             </Field>
-            <Field label="Phone number" hint="Used for SMS notifications and payouts.">
+            <Field
+              label="Phone number"
+              hint="International format with country code (e.g. +2348031234567)"
+              error={!isPhoneValid ? 'Must be valid E.164 format (e.g. +2348031234567)' : undefined}
+            >
               <input
-                className={inputClass}
+                className={`${inputClass} ${!isPhoneValid ? 'border-bad ring-1 ring-bad' : ''}`}
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -93,9 +115,13 @@ export default function BeneficiariesPage() {
                 required
               />
             </Field>
-            <Field label="Partner KYC reference">
+            <Field
+              label="Partner KYC reference"
+              hint="Alphanumeric ID issued by the off-ramp partner"
+              error={!isKycValid ? 'Must be 3-32 alphanumeric characters, dashes, or underscores' : undefined}
+            >
               <input
-                className={inputClass}
+                className={`${inputClass} ${!isKycValid ? 'border-bad ring-1 ring-bad' : ''}`}
                 value={kycRef}
                 onChange={(e) => setKycRef(e.target.value)}
                 placeholder="PARTNER-NG-00000"
@@ -123,7 +149,7 @@ export default function BeneficiariesPage() {
             )}
 
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting || !isPhoneValid || !isKycValid}>
                 {submitting ? 'Registering…' : 'Register beneficiary'}
               </Button>
             </div>
