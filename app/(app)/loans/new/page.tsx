@@ -266,8 +266,17 @@ export default function NewLoanPage() {
                       {formatUsd(quote.principal_usd)}
                     </dd>
                   </div>
+                  {quote.principal_usd > 0 && quote.principal_local > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-muted">Est. FX Rate</dt>
+                      <dd className="font-mono tabular-nums text-ink">
+                        1 USD ≈ {(quote.principal_local / quote.principal_usd).toFixed(2)}{' '}
+                        {quote.local_currency}
+                      </dd>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-3">
-                    <dt className="text-ink-muted">Required LTV</dt>
+                    <dt className="text-ink-muted">Required LTV (from reputation)</dt>
                     <dd className="font-mono tabular-nums text-ink">
                       {formatRatio(quote.ltv_ratio)}
                     </dd>
