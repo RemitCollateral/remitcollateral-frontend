@@ -62,6 +62,8 @@ export default function RemittancesPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
   function exportCsv() {
     if (!remittances.data || remittances.data.length === 0) return;
 

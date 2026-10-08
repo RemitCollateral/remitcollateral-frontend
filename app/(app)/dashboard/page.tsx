@@ -111,7 +111,7 @@ export default function DashboardPage() {
               </div>
 
               {isHighUtilization && (
-                <ButtonLink href="/vault" variant="secondary" size="sm">
+                <ButtonLink href="/vault" variant="secondary">
                   Deposit USDC Buffer
                 </ButtonLink>
               )}

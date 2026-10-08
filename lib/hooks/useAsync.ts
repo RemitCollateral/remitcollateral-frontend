@@ -37,7 +37,10 @@ export function useAsync<T>(
     revalidateOnFocus = true,
     pollIntervalMs,
   } = options;
-  const cached = key ? (memoryCache.get(key)?.data as T | undefined) : undefined;
+  const now = Date.now();
+  const cachedEntry = key ? memoryCache.get(key) : undefined;
+  const isFresh = cachedEntry && (now - cachedEntry.timestamp < cacheTtlMs);
+  const cached = isFresh ? (cachedEntry.data as T) : undefined;
 
   const [data, setData] = useState<T | null>(cached ?? null);
   const [loading, setLoading] = useState(cached === undefined);
