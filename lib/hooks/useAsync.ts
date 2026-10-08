@@ -16,18 +16,27 @@ const memoryCache = new Map<string, { data: unknown; timestamp: number }>();
 export interface AsyncOptions {
   key?: string;
   cacheTtlMs?: number;
+  /** Automatically revalidate when browser window gains focus (defaults to true). */
+  revalidateOnFocus?: boolean;
+  /** Periodic polling interval in ms (disabled by default). Pauses when tab is hidden. */
+  pollIntervalMs?: number;
 }
 
 /**
- * Runs an async loader on mount and whenever `deps` change, with SWR caching
- * to eliminate UI flicker and layout shift between route navigation.
+ * Runs an async loader on mount and whenever `deps` change, with SWR caching,
+ * window focus revalidation, and tab-visibility-aware polling.
  */
 export function useAsync<T>(
   loader: () => Promise<T>,
   deps: unknown[] = [],
   options: AsyncOptions = {}
 ): AsyncState<T> {
-  const { key, cacheTtlMs = 60_000 } = options;
+  const {
+    key,
+    cacheTtlMs = 60_000,
+    revalidateOnFocus = true,
+    pollIntervalMs,
+  } = options;
   const cached = key ? (memoryCache.get(key)?.data as T | undefined) : undefined;
 
   const [data, setData] = useState<T | null>(cached ?? null);
@@ -72,6 +81,38 @@ export function useAsync<T>(
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nonce, ...deps]);
+
+  // Window focus & tab visibility change listener
+  useEffect(() => {
+    if (!revalidateOnFocus) return;
+
+    function handleFocusOrVisible() {
+      if (document.visibilityState === 'visible') {
+        setNonce((n) => n + 1);
+      }
+    }
+
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
+  }, [revalidateOnFocus]);
+
+  // Periodic polling when tab is visible
+  useEffect(() => {
+    if (!pollIntervalMs || pollIntervalMs <= 0) return;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        setNonce((n) => n + 1);
+      }
+    }, pollIntervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [pollIntervalMs]);
 
   const reload = useCallback(() => {
     if (key) memoryCache.delete(key);
