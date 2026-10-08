@@ -68,6 +68,77 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Portfolio Health & Collateral Utilization Gauge */}
+      {(() => {
+        const utilizationPct =
+          vault.collateral_balance > 0
+            ? Math.min(100, Math.round((vault.locked_amount / vault.collateral_balance) * 100))
+            : 0;
+
+        const isHighUtilization = utilizationPct >= 85;
+        const healthScore =
+          atRisk.length > 0
+            ? 'At Risk'
+            : isHighUtilization
+            ? 'Moderate'
+            : 'Healthy';
+
+        const healthTone =
+          atRisk.length > 0 ? 'bad' : isHighUtilization ? 'warn' : 'good';
+
+        return (
+          <Card className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-ink">Portfolio Health & Utilization</h3>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      healthTone === 'good'
+                        ? 'bg-good-soft text-good'
+                        : healthTone === 'warn'
+                        ? 'bg-warn-soft text-warn'
+                        : 'bg-bad-soft text-bad'
+                    }`}
+                  >
+                    {healthScore}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-ink-muted">
+                  {utilizationPct}% of total collateral locked behind active loans
+                  {atRisk.length > 0 && ` · ${atRisk.length} loan(s) require attention`}
+                </p>
+              </div>
+
+              {isHighUtilization && (
+                <ButtonLink href="/vault" variant="secondary" size="sm">
+                  Deposit USDC Buffer
+                </ButtonLink>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <div className="flex justify-between text-xs font-medium text-ink-muted mb-1.5">
+                <span>Utilization Rate</span>
+                <span className="font-mono">{utilizationPct}%</span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-subtle border border-surface-border">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    utilizationPct >= 90
+                      ? 'bg-bad'
+                      : utilizationPct >= 75
+                      ? 'bg-warn'
+                      : 'bg-brand'
+                  }`}
+                  style={{ width: `${utilizationPct}%` }}
+                />
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
+
       {atRisk.length > 0 && <RiskNotice loans={atRisk} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
