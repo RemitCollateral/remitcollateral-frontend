@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import Link from 'next/link';
 
 /** Joins conditional class names. */
@@ -225,3 +225,91 @@ export function ProgressBar({
     </div>
   );
 }
+
+/** Accessible Modal Dialog with keyboard trap, Escape handling, and ARIA attributes */
+export function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (event.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+          last.focus();
+          event.preventDefault();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          first.focus();
+          event.preventDefault();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      aria-hidden={!open}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby={description ? 'modal-description' : undefined}
+        className="w-full max-w-lg rounded-2xl border border-surface-border bg-surface p-6 shadow-xl"
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 id="modal-title" className="text-lg font-semibold text-ink">
+              {title}
+            </h2>
+            {description && (
+              <p id="modal-description" className="mt-1 text-sm text-ink-muted">
+                {description}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-surface-sunken hover:text-ink"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
