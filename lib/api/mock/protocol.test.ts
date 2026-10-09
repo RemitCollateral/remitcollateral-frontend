@@ -57,8 +57,8 @@ describe('Protocol Math', () => {
     it('builds installments totaling principal', () => {
       const installments = buildSchedule(1200, 4, 30, new Date('2026-01-01'));
       expect(installments).toHaveLength(4);
-      expect(installments[0].installment_number).toBe(1);
-      expect(installments[3].installment_number).toBe(4);
+      expect(installments[0].installment).toBe(1);
+      expect(installments[3].installment).toBe(4);
       const sum = installments.reduce((acc, curr) => acc + curr.amount_local, 0);
       expect(sum).toBe(1200);
     });
