@@ -15,15 +15,27 @@ commit — what they stand to lose.
 
 ## Live deployment
 
-**<https://remitcollateral-frontend.vercel.app>** — deployed on Vercel in `live`
+**<https://remitcollateral-frontend-alpha.vercel.app>** — deployed on Vercel in `live`
 mode (`NEXT_PUBLIC_API_MODE=live`), so every screen reads from the real backend at
 <https://remitcollateral-backend-production.up.railway.app/api/v1>, which is
-connected to the contracts deployed on Stellar testnet. There is no mock data in
-this deployment: the mock layer is never reached in `live` mode and is compiled out
-of the production bundle.
+connected to the contracts deployed on Stellar testnet. No mock data is served by
+this deployment: in `live` mode the app uses the HTTP client and never calls the
+mock one.
+
+The mock layer is still *shipped* in the production bundle (it is selected at
+runtime from `NEXT_PUBLIC_API_MODE`, not removed at build time), so a build made
+without that variable set would run on mock data. Production builds therefore
+refuse to build unless the mode is set explicitly. The same applies to any Vercel
+target other than Production unless the variable is set for it.
 
 Use a [Freighter](https://www.freighter.app/) wallet set to **Testnet**. The wallet
 you sign in with becomes your guarantor account.
+
+**Telling mock from live:** in mock mode the header shows an amber *Mock data* badge
+and the guarantor is "Adaeze Nwosu". Mock mode still prompts a real Freighter if one
+is installed, but signs in against the mock API, so a Freighter prompt alone does not
+prove you are on live data. A local `pnpm dev` is mock mode unless `.env.local` says
+otherwise.
 
 Note this is a testnet deployment. The backend it talks to still simulates the
 off-ramp partner (no real money moves) and holds state in memory, so data is lost
