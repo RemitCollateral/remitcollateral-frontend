@@ -17,7 +17,7 @@ commit — what they stand to lose.
 
 **<https://remitcollateral-frontend-alpha.vercel.app>** — deployed on Vercel in `live`
 mode (`NEXT_PUBLIC_API_MODE=live`), so every screen reads from the real backend at
-<https://remitcollateral-backend-production.up.railway.app/api/v1>, which is
+<https://remitcollateral-backend-production.up.railway.app/api/v1> (status: <https://remitcollateral-backend-production.up.railway.app/health>), which is
 connected to the contracts deployed on Stellar testnet. No mock data is served by
 this deployment: in `live` mode the app uses the HTTP client and never calls the
 mock one.
