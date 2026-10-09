@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/components/providers/SessionProvider';
 import { Button } from '@/components/ui';
-import { isFreighterInstalled } from '@/lib/stellar/freighter';
+import { detectFreighter } from '@/lib/stellar/freighter';
 import { API_MODE } from '@/lib/config';
 
 const steps = [
@@ -25,10 +25,22 @@ const steps = [
 export default function ConnectPage() {
   const router = useRouter();
   const { status, connect, connecting, error } = useSession();
+  // null while we are still asking the extension; detection is asynchronous.
+  const [freighter, setFreighter] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (status === 'connected') router.replace('/dashboard');
   }, [status, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    detectFreighter().then((found) => {
+      if (!cancelled) setFreighter(found);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="mx-auto grid min-h-screen max-w-5xl items-center gap-12 px-6 py-16 lg:grid-cols-2">
@@ -55,11 +67,13 @@ export default function ConnectPage() {
           </Button>
 
           <p className="mt-3 text-sm text-ink-muted">
-            {isFreighterInstalled()
-              ? 'Freighter detected. You will be asked to sign a challenge — no transaction, no fee.'
-              : API_MODE === 'mock'
-                ? 'Freighter is not installed. Running in mock mode, a simulated wallet will be used.'
-                : 'Freighter is required to connect. Install the extension, then reload this page.'}
+            {freighter === null
+              ? 'Looking for Freighter…'
+              : freighter
+                ? 'Freighter detected. You will be asked to sign a challenge — no transaction, no fee.'
+                : API_MODE === 'mock'
+                  ? 'Freighter is not installed. Running in mock mode, a simulated wallet will be used.'
+                  : 'Freighter is required to connect. Install the extension from freighter.app, allow it on this site, then reload this page.'}
           </p>
 
           {error && (

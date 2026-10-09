@@ -19,7 +19,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { clearSession, getSessionToken, getStoredGuarantor, saveSession } from '@/lib/session';
-import { connectWallet, getActiveWalletAddress, isFreighterInstalled, signChallenge } from '@/lib/stellar/freighter';
+import { connectWallet, detectFreighter, getActiveWalletAddress, signChallenge } from '@/lib/stellar/freighter';
 import type { Guarantor } from '@/lib/types';
 
 type SessionStatus = 'loading' | 'connected' | 'disconnected';
@@ -56,20 +56,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Watch for active Freighter account changes to prevent desynced transactions
   useEffect(() => {
-    if (!guarantor || !isFreighterInstalled()) return;
+    if (!guarantor) return;
 
-    const interval = setInterval(async () => {
-      const active = await getActiveWalletAddress();
-      if (active && active !== guarantor.wallet_address) {
-        clearSession();
-        setGuarantor(null);
-        setStatus('disconnected');
-        setError('Freighter account changed. Please reconnect with your new account.');
-        router.push('/');
-      }
-    }, 2000);
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
-    return () => clearInterval(interval);
+    // Detection is asynchronous, so the watcher starts once Freighter answers.
+    detectFreighter().then((found) => {
+      if (cancelled || !found) return;
+      interval = setInterval(async () => {
+        const active = await getActiveWalletAddress();
+        if (active && active !== guarantor.wallet_address) {
+          clearSession();
+          setGuarantor(null);
+          setStatus('disconnected');
+          setError('Freighter account changed. Please reconnect with your new account.');
+          router.push('/');
+        }
+      }, 2000);
+    });
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
   }, [guarantor, router]);
 
   const connect = useCallback(async () => {

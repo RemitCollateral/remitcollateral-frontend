@@ -1,40 +1,27 @@
 /**
- * Thin wrapper over the Freighter browser extension.
+ * Thin wrapper over the Freighter browser extension, via the official
+ * `@stellar/freighter-api` client.
  *
- * Freighter injects `window.freighterApi`, so no SDK dependency is needed for
- * what the dashboard needs from a wallet: reading the public key, signing the
- * backend's sign-in challenge, and signing the transactions that move the
- * guarantor's collateral. In mock mode a simulated wallet stands in, so the
- * dashboard is usable without the extension installed.
+ * Freighter does NOT inject a global object into the page. The client talks to
+ * the extension's content script by `window.postMessage`, so the only way to
+ * know whether the extension is there is to ask it (`isConnected`). An earlier
+ * version of this file looked for a `window.freighterApi` that never exists,
+ * which made every real browser report "Freighter was not detected" whether or
+ * not the extension was installed.
+ *
+ * In mock mode a simulated wallet stands in, so the dashboard is usable
+ * without the extension.
  */
 
+import {
+  getAddress,
+  getNetwork,
+  isConnected,
+  requestAccess,
+  signMessage,
+  signTransaction as freighterSignTransaction,
+} from '@stellar/freighter-api';
 import { API_MODE, STELLAR_NETWORK } from '@/lib/config';
-
-/** Shape of the injected object, kept loose across Freighter versions. */
-interface FreighterApi {
-  isConnected?: () => Promise<boolean | { isConnected: boolean }>;
-  requestAccess?: () => Promise<string | { address: string; error?: string }>;
-  getPublicKey?: () => Promise<string>;
-  getAddress?: () => Promise<{ address: string; error?: string }>;
-  signMessage?: (
-    message: string,
-    opts?: { network?: string; networkPassphrase?: string; address?: string },
-  ) => Promise<string | { signedMessage: string; signerAddress?: string; error?: string }>;
-  signBlob?: (
-    blob: string,
-    opts?: { network?: string; accountToSign?: string },
-  ) => Promise<string | { signedBlob: string; error?: string }>;
-  signTransaction?: (
-    xdr: string,
-    opts?: { network?: string; networkPassphrase?: string; address?: string; accountToSign?: string },
-  ) => Promise<string | { signedTxXdr: string; signerAddress?: string; error?: string }>;
-}
-
-declare global {
-  interface Window {
-    freighterApi?: FreighterApi;
-  }
-}
 
 export class WalletError extends Error {
   constructor(message: string) {
@@ -45,76 +32,84 @@ export class WalletError extends Error {
 
 const MOCK_ADDRESS = 'GBXK7ZCMLQ4XR2PDTV3M6HSNAWQ2VJLKZ5YQF7TG3WNXHRBUE4C2MOCK';
 
-function extension(): FreighterApi | null {
-  if (typeof window === 'undefined') return null;
-  return window.freighterApi ?? null;
+/** Freighter reports errors as `{ message, code }` objects, never bare strings. */
+function describe(error: { message?: string } | string | undefined): string {
+  if (!error) return 'Freighter returned an unexpected response';
+  return typeof error === 'string' ? error : (error.message ?? 'Freighter returned an error');
 }
 
-/** Whether a real wallet is available to sign. False in mock mode by design. */
-export function isFreighterInstalled(): boolean {
-  return extension() !== null;
+let detection: Promise<boolean> | null = null;
+
+/**
+ * Whether the Freighter extension is installed and answering. Asks it, rather
+ * than looking for a global it does not define. When the extension is absent
+ * the client gives up after about two seconds, so the answer is cached.
+ */
+export function detectFreighter(): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  detection ??= isConnected()
+    .then((result) => result.isConnected === true)
+    .catch(() => false);
+  return detection;
 }
 
-/** True when the app is standing in for a wallet rather than using one. */
-export function isSimulatedWallet(): boolean {
-  return API_MODE === 'mock' && !isFreighterInstalled();
+/** Freighter's own names for the networks it can be set to. */
+function freighterNetworkName(network: string): string {
+  const lower = network.toLowerCase();
+  return lower === 'mainnet' || lower === 'public' ? 'PUBLIC' : lower.toUpperCase();
 }
 
-function unwrap<T extends object, K extends keyof T>(
-  result: string | T,
-  key: K,
-): string {
-  if (typeof result === 'string') return result;
-  if ('error' in result && result.error) {
-    throw new WalletError(String(result.error));
+/**
+ * Freighter ships set to Mainnet. A signature over a Testnet transaction by a
+ * wallet on the wrong network fails in ways that look unrelated, so say so
+ * plainly before asking for anything.
+ */
+async function assertExpectedNetwork(): Promise<void> {
+  const current = await getNetwork().catch(() => null);
+  if (!current || current.error || !current.network) return;
+
+  const expected = freighterNetworkName(STELLAR_NETWORK);
+  if (current.network.toUpperCase() !== expected) {
+    throw new WalletError(
+      `Freighter is set to ${current.network}, but this app uses ${expected}. ` +
+        'Switch networks in Freighter (Settings → Network), then try again.',
+    );
   }
-  const value = result[key];
-  if (typeof value !== 'string' || !value) {
-    throw new WalletError('Freighter returned an unexpected response');
-  }
-  return value;
 }
 
 /** Prompts Freighter for access and returns the guarantor's public key. */
 export async function connectWallet(): Promise<string> {
-  const api = extension();
-
-  if (!api) {
+  if (!(await detectFreighter())) {
     if (API_MODE === 'mock') return MOCK_ADDRESS;
     throw new WalletError(
-      'Freighter was not detected. Install the extension to connect your wallet.',
+      'Freighter was not detected. Install the extension from freighter.app, ' +
+        'allow it on this site, then reload this page.',
     );
   }
 
-  if (api.requestAccess) {
-    const result = await api.requestAccess();
-    const address = typeof result === 'string' ? result : result.address;
-    if (address) return address;
-    if (typeof result !== 'string' && result.error) {
-      throw new WalletError(String(result.error));
-    }
-  }
+  await assertExpectedNetwork();
 
-  if (api.getAddress) return unwrap(await api.getAddress(), 'address');
-  if (api.getPublicKey) return await api.getPublicKey();
-
-  throw new WalletError('This version of Freighter is not supported.');
+  const access = await requestAccess();
+  if (access.error) throw new WalletError(describe(access.error));
+  if (!access.address) throw new WalletError('Freighter did not return an account.');
+  return access.address;
 }
 
 /** Non-intrusively retrieves current public key without triggering access dialog. */
 export async function getActiveWalletAddress(): Promise<string | null> {
-  const api = extension();
-  if (!api) return API_MODE === 'mock' ? MOCK_ADDRESS : null;
+  if (!(await detectFreighter())) return API_MODE === 'mock' ? MOCK_ADDRESS : null;
   try {
-    if (api.getAddress) {
-      const res = await api.getAddress();
-      return typeof res === 'object' && res.address ? res.address : null;
-    }
-    if (api.getPublicKey) return await api.getPublicKey();
+    const result = await getAddress();
+    return !result.error && result.address ? result.address : null;
   } catch {
     return null;
   }
-  return null;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return window.btoa(binary);
 }
 
 /**
@@ -125,32 +120,18 @@ export async function signChallenge(
   challenge: string,
   address: string,
 ): Promise<string> {
-  const api = extension();
-
-  if (!api) {
+  if (!(await detectFreighter())) {
     if (API_MODE === 'mock') return `mock-signature:${challenge}`;
     throw new WalletError('Freighter was not detected.');
   }
 
-  if (api.signMessage) {
-    const result = await api.signMessage(challenge, {
-      network: STELLAR_NETWORK,
-      address,
-    });
-    return unwrap(result, 'signedMessage');
-  }
+  const result = await signMessage(challenge, { address });
+  if (result.error) throw new WalletError(describe(result.error));
 
-  if (api.signBlob) {
-    const encoded =
-      typeof window === 'undefined' ? challenge : window.btoa(challenge);
-    const result = await api.signBlob(encoded, {
-      network: STELLAR_NETWORK,
-      accountToSign: address,
-    });
-    return unwrap(result, 'signedBlob');
-  }
-
-  throw new WalletError('This version of Freighter cannot sign messages.');
+  // Newer Freighter returns the signature as a string, older as raw bytes.
+  const signed = result.signedMessage;
+  if (!signed) throw new WalletError('Freighter did not return a signature.');
+  return typeof signed === 'string' ? signed : toBase64(signed);
 }
 
 /**
@@ -163,19 +144,12 @@ export async function signTransaction(
   networkPassphrase: string,
   address: string,
 ): Promise<string> {
-  const api = extension();
-  if (!api) {
+  if (!(await detectFreighter())) {
     throw new WalletError('Freighter was not detected. Install the extension to sign transactions.');
   }
-  if (!api.signTransaction) {
-    throw new WalletError('This version of Freighter cannot sign transactions.');
-  }
 
-  const result = await api.signTransaction(xdr, {
-    network: STELLAR_NETWORK,
-    networkPassphrase,
-    address,
-    accountToSign: address,
-  });
-  return unwrap(result, 'signedTxXdr');
+  const result = await freighterSignTransaction(xdr, { networkPassphrase, address });
+  if (result.error) throw new WalletError(describe(result.error));
+  if (!result.signedTxXdr) throw new WalletError('Freighter did not return a signed transaction.');
+  return result.signedTxXdr;
 }
