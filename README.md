@@ -13,6 +13,30 @@ commit — what they stand to lose.
 
 ---
 
+## Live deployment
+
+**<https://remitcollateral-frontend.vercel.app>** — deployed on Vercel in `live`
+mode (`NEXT_PUBLIC_API_MODE=live`), so every screen reads from the real backend at
+<https://remitcollateral-backend-production.up.railway.app/api/v1>, which is
+connected to the contracts deployed on Stellar testnet. There is no mock data in
+this deployment: the mock layer is never reached in `live` mode and is compiled out
+of the production bundle.
+
+Use a [Freighter](https://www.freighter.app/) wallet set to **Testnet**. The wallet
+you sign in with becomes your guarantor account.
+
+Note this is a testnet deployment. The backend it talks to still simulates the
+off-ramp partner (no real money moves) and holds state in memory, so data is lost
+when the backend restarts. See the
+[integration status](https://github.com/RemitCollateral/remitcollateral-docs/blob/main/ARCHITECTURE.md#integration-status).
+
+The deployed backend only accepts browser requests from the deployed frontend's
+origin (`CORS_ALLOWED_ORIGINS`), so a local `pnpm dev` pointed at it will be blocked
+by the browser. To develop against a real backend, run
+[remitcollateral-backend](https://github.com/RemitCollateral/remitcollateral-backend)
+locally and set `NEXT_PUBLIC_API_MODE=live` with `NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1`.
+A fork deploying its own copy needs its origin added to the backend's allowlist.
+
 ## Quick start
 
 ```bash
