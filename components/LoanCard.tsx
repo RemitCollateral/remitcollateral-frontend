@@ -12,11 +12,11 @@ export function LoanCard({ loan }: { loan: LoanWithBeneficiary }) {
   return (
     <Link
       href={`/loans/${loan.id}`}
-      className="block rounded-xl border border-surface-border bg-surface p-5 transition-colors hover:border-brand/40 hover:bg-brand-soft/30"
+      className="block rounded-2xl border border-surface-border bg-surface p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-ink">
+          <p className="font-display text-lg font-semibold text-ink">
             {loan.beneficiary.display_name ?? loan.beneficiary.phone_number}
           </p>
           <p className="mt-0.5 text-sm text-ink-muted">

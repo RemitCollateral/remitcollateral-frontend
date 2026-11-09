@@ -29,7 +29,7 @@ export function ReputationMeter({
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-3xl font-semibold tabular-nums text-ink">
+        <span className="font-display text-4xl font-semibold tabular-nums text-ink">
           {formatScore(score)}
           <span className="ml-1 text-base font-normal text-ink-muted">/ 100</span>
         </span>

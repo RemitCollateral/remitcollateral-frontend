@@ -5,9 +5,44 @@
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-surface-sunken text-ink;
+    @apply bg-surface-sunken font-sans text-ink;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::selection {
+    @apply bg-gold-bright/40 text-ink;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand/50 ring-offset-2 ring-offset-surface-sunken;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Fine dotted texture for dark hero areas. */
+  .bg-grid-dark {
+    background-image: radial-gradient(rgba(201, 220, 214, 0.09) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .text-gold-gradient {
+    @apply bg-gradient-to-r from-gold-bright to-[#f3dca0] bg-clip-text text-transparent;
   }
 }

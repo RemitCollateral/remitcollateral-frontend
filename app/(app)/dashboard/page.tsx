@@ -91,9 +91,9 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-ink">Portfolio Health & Utilization</h3>
+                  <h3 className="font-display text-lg font-semibold text-ink">Portfolio health &amp; utilization</h3>
                   <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       healthTone === 'good'
                         ? 'bg-good-soft text-good'
                         : healthTone === 'warn'
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                 <span>Utilization Rate</span>
                 <span className="font-mono">{utilizationPct}%</span>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-subtle border border-surface-border">
+              <div className="h-2.5 w-full overflow-hidden rounded-full border border-surface-border bg-surface-subtle">
                 <div
                   className={`h-full transition-all duration-300 ${
                     utilizationPct >= 90
@@ -146,7 +146,7 @@ export default function DashboardPage() {
           <CardHeader
             title="Open loans"
             action={
-              <Link href="/loans" className="text-sm font-medium text-brand hover:underline">
+              <Link href="/loans" className="text-sm font-semibold text-brand hover:underline">
                 View all
               </Link>
             }

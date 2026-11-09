@@ -11,8 +11,8 @@ export function RiskNotice({ loans }: { loans: LoanWithBeneficiary[] }) {
   const exposure = loans.reduce((sum, loan) => sum + loan.collateral_locked_usd, 0);
 
   return (
-    <div className="rounded-xl border border-warn/30 bg-warn-soft p-5">
-      <h2 className="text-sm font-semibold text-warn">
+    <div className="rounded-2xl border border-warn/30 border-l-4 border-l-warn bg-warn-soft p-5">
+      <h2 className="font-display text-base font-semibold text-warn">
         {loans.length === 1 ? '1 loan needs attention' : `${loans.length} loans need attention`}
       </h2>
       <p className="mt-1 text-sm text-warn/90">

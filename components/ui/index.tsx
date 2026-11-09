@@ -16,7 +16,7 @@ export function Card({
   return (
     <section
       className={cx(
-        'rounded-xl border border-surface-border bg-surface p-5 shadow-sm',
+        'rounded-2xl border border-surface-border bg-surface p-5 shadow-card sm:p-6',
         className,
       )}
     >
@@ -37,7 +37,7 @@ export function CardHeader({
   return (
     <div className="mb-4 flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+        <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
           {title}
         </h2>
         {description && <p className="mt-1 text-sm text-ink-muted">{description}</p>}
@@ -64,11 +64,21 @@ export function StatTile({
     warn: 'text-warn',
     bad: 'text-bad',
   }[tone];
+  const accentClass = {
+    neutral: 'bg-surface-border',
+    good: 'bg-good/60',
+    warn: 'bg-gold',
+    bad: 'bg-bad/60',
+  }[tone];
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{label}</p>
-      <p className={cx('mt-2 font-mono text-2xl font-semibold tabular-nums', toneClass)}>
+    <div className="relative overflow-hidden rounded-2xl border border-surface-border bg-surface p-5 shadow-card">
+      <span
+        aria-hidden="true"
+        className={cx('absolute inset-x-0 top-0 h-0.5', accentClass)}
+      />
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
+      <p className={cx('mt-2.5 font-mono text-2xl font-semibold tabular-nums tracking-tight', toneClass)}>
         {value}
       </p>
       {hint && <p className="mt-1 text-xs text-ink-muted">{hint}</p>}
@@ -78,6 +88,7 @@ export function StatTile({
 
 const badgeTones = {
   neutral: 'bg-surface-sunken text-ink-muted ring-surface-border',
+  gold: 'bg-gold-soft text-gold ring-gold/25',
   brand: 'bg-brand-soft text-brand ring-brand/20',
   good: 'bg-good-soft text-good ring-good/20',
   warn: 'bg-warn-soft text-warn ring-warn/20',
@@ -90,7 +101,7 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+        'inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
         badgeTones[tone],
       )}
     >
@@ -100,16 +111,18 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
 }
 
 const buttonVariants = {
-  primary: 'bg-brand text-white hover:bg-brand/90 disabled:bg-brand/40',
+  primary:
+    'bg-brand text-white shadow-sm hover:bg-brand-strong disabled:bg-brand/40 disabled:shadow-none',
+  gold: 'bg-gold-bright text-forest shadow-sm hover:bg-[#ebc26f] disabled:opacity-50',
   secondary:
-    'border border-surface-border bg-surface text-ink hover:bg-surface-sunken disabled:text-ink-muted',
-  danger: 'bg-bad text-white hover:bg-bad/90 disabled:bg-bad/40',
+    'border border-surface-border bg-surface text-ink shadow-sm hover:border-ink/25 hover:bg-surface-sunken disabled:text-ink-muted',
+  danger: 'bg-bad text-white shadow-sm hover:bg-bad/90 disabled:bg-bad/40',
 } as const;
 
 type ButtonVariant = keyof typeof buttonVariants;
 
 const buttonBase =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:translate-y-px disabled:cursor-not-allowed';
 
 export function Button({
   children,
@@ -192,7 +205,7 @@ export function Field({
 }
 
 export const inputClass =
-  'w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-brand focus:ring-2 focus:ring-brand/20';
+  'w-full rounded-xl border border-surface-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-shadow placeholder:text-ink-faint hover:border-ink/25 focus:border-brand focus:ring-2 focus:ring-brand/20';
 
 export function EmptyState({
   title,
@@ -204,8 +217,8 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-surface-border bg-surface-sunken px-6 py-12 text-center">
-      <p className="text-sm font-medium text-ink">{title}</p>
+    <div className="rounded-2xl border border-dashed border-ink/20 bg-surface/60 px-6 py-14 text-center">
+      <p className="font-display text-base font-semibold text-ink">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">{description}</p>
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
@@ -213,12 +226,12 @@ export function EmptyState({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx('animate-pulse rounded-lg bg-surface-sunken', className)} />;
+  return <div className={cx('animate-pulse rounded-2xl bg-surface-subtle', className)} />;
 }
 
 export function ErrorNotice({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-xl border border-bad/20 bg-bad-soft px-4 py-3 text-sm text-bad">
+    <div className="rounded-2xl border border-bad/20 bg-bad-soft px-4 py-3 text-sm text-bad">
       <p>{message}</p>
       {onRetry && (
         <button onClick={onRetry} className="mt-2 font-medium underline underline-offset-2">
@@ -238,14 +251,14 @@ export function ProgressBar({
   tone?: 'brand' | 'good' | 'warn' | 'bad';
 }) {
   const fill = {
-    brand: 'bg-brand',
+    brand: 'bg-gradient-to-r from-brand to-[#16906f]',
     good: 'bg-good',
     warn: 'bg-warn',
     bad: 'bg-bad',
   }[tone];
 
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-sunken">
+    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-subtle">
       <div
         className={cx('h-full rounded-full transition-all', fill)}
         style={{ width: `${Math.min(Math.max(value, 0), 1) * 100}%` }}
@@ -305,7 +318,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-forest/60 p-4 backdrop-blur-sm"
       aria-hidden={!open}
     >
       <div
@@ -314,11 +327,11 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         aria-describedby={description ? 'modal-description' : undefined}
-        className="w-full max-w-lg rounded-2xl border border-surface-border bg-surface p-6 shadow-xl"
+        className="w-full max-w-lg animate-fade-up rounded-2xl border border-surface-border bg-surface p-6 shadow-lift"
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 id="modal-title" className="text-lg font-semibold text-ink">
+            <h2 id="modal-title" className="font-display text-xl font-semibold text-ink">
               {title}
             </h2>
             {description && (

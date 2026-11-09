@@ -61,8 +61,8 @@ export default function LoanDetailPage({ params }: { params: { id: string } }) {
       />
 
       {loan.status === 'grace' && loan.grace_expires_at && (
-        <div className="rounded-xl border border-warn/30 bg-warn-soft p-5">
-          <h2 className="text-sm font-semibold text-warn">Grace period running</h2>
+        <div className="rounded-2xl border border-warn/30 border-l-4 border-l-warn bg-warn-soft p-5">
+          <h2 className="font-display text-base font-semibold text-warn">Grace period running</h2>
           <p className="mt-1 text-sm text-warn/90">
             An installment was missed. If payment is not attested by{' '}
             {formatDate(loan.grace_expires_at)} ({formatRelativeDays(loan.grace_expires_at)}),
@@ -73,8 +73,8 @@ export default function LoanDetailPage({ params }: { params: { id: string } }) {
       )}
 
       {loan.status === 'defaulted' && (
-        <div className="rounded-xl border border-bad/30 bg-bad-soft p-5">
-          <h2 className="text-sm font-semibold text-bad">Collateral forfeited</h2>
+        <div className="rounded-2xl border border-bad/30 border-l-4 border-l-bad bg-bad-soft p-5">
+          <h2 className="font-display text-base font-semibold text-bad">Collateral forfeited</h2>
           <p className="mt-1 text-sm text-bad/90">
             This loan defaulted with {formatLocal(loan.outstanding_local, loan.local_currency)}{' '}
             outstanding. The corresponding collateral was marked for liquidation and is not
