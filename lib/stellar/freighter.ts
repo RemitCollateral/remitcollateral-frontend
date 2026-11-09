@@ -9,8 +9,8 @@
  * which made every real browser report "Freighter was not detected" whether or
  * not the extension was installed.
  *
- * In mock mode a simulated wallet stands in, so the dashboard is usable
- * without the extension.
+ * There is deliberately no simulated wallet: connecting always goes through the
+ * real extension, whatever the API mode.
  */
 
 import {
@@ -21,7 +21,7 @@ import {
   signMessage,
   signTransaction as freighterSignTransaction,
 } from '@stellar/freighter-api';
-import { API_MODE, STELLAR_NETWORK } from '@/lib/config';
+import { STELLAR_NETWORK } from '@/lib/config';
 
 export class WalletError extends Error {
   constructor(message: string) {
@@ -29,8 +29,6 @@ export class WalletError extends Error {
     this.name = 'WalletError';
   }
 }
-
-const MOCK_ADDRESS = 'GBXK7ZCMLQ4XR2PDTV3M6HSNAWQ2VJLKZ5YQF7TG3WNXHRBUE4C2MOCK';
 
 /** Freighter reports errors as `{ message, code }` objects, never bare strings. */
 function describe(error: { message?: string } | string | undefined): string {
@@ -80,7 +78,6 @@ async function assertExpectedNetwork(): Promise<void> {
 /** Prompts Freighter for access and returns the guarantor's public key. */
 export async function connectWallet(): Promise<string> {
   if (!(await detectFreighter())) {
-    if (API_MODE === 'mock') return MOCK_ADDRESS;
     throw new WalletError(
       'Freighter was not detected. Install the extension from freighter.app, ' +
         'allow it on this site, then reload this page.',
@@ -97,7 +94,7 @@ export async function connectWallet(): Promise<string> {
 
 /** Non-intrusively retrieves current public key without triggering access dialog. */
 export async function getActiveWalletAddress(): Promise<string | null> {
-  if (!(await detectFreighter())) return API_MODE === 'mock' ? MOCK_ADDRESS : null;
+  if (!(await detectFreighter())) return null;
   try {
     const result = await getAddress();
     return !result.error && result.address ? result.address : null;
@@ -121,7 +118,6 @@ export async function signChallenge(
   address: string,
 ): Promise<string> {
   if (!(await detectFreighter())) {
-    if (API_MODE === 'mock') return `mock-signature:${challenge}`;
     throw new WalletError('Freighter was not detected.');
   }
 

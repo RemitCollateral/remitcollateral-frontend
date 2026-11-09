@@ -144,14 +144,15 @@ describe('connecting', () => {
     await assertion;
   });
 
-  it('uses the simulated wallet in mock mode when there is no extension', async () => {
+  it('never falls back to a simulated wallet, even in mock mode', async () => {
     vi.useFakeTimers();
     installBrowser(null);
     const wallet = await loadWallet('mock');
 
     const attempt = wallet.connectWallet();
+    const assertion = expect(attempt).rejects.toThrow(/Freighter was not detected/);
     await vi.advanceTimersByTimeAsync(2100);
-    expect(await attempt).toMatch(/MOCK$/);
+    await assertion;
   });
 });
 
